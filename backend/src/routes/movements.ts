@@ -53,16 +53,27 @@ const MovementSchema = z.discriminatedUnion('type', [
 // GET /movements
 router.get('/', async (req, res: Response) => {
   const { type, limit = '50' } = req.query
-  const movements = await prisma.movement.findMany({
-    where: { ...(type ? { type: String(type) as any } : {}) },
-    include: {
-      user:  { select: { id: true, name: true } },
-      lines: { include: { product: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-    take: parseInt(String(limit)),
-  })
-  res.json(movements)
+  try {
+    const movements = await prisma.movement.findMany({
+      where: { ...(type ? { type: String(type) as any } : {}) },
+      include: {
+        user:  { select: { id: true, name: true } },
+        lines: {
+          include: {
+            product: {
+              select: { id: true, name: true, unit: true }
+            }
+          }
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: parseInt(String(limit)),
+    })
+    res.json(movements)
+  } catch (err: any) {
+    console.error(err)
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // POST /movements

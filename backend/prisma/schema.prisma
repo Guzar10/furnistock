@@ -49,15 +49,16 @@ model User {
 }
 
 model Product {
-  id          String      @id @default(cuid())
+  id          String        @id @default(cuid())
   name        String
   type        ProductType
-  unit        Unit        @default(BUC)
+  unit        Unit          @default(BUC)
   description String?
-  active      Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  active      Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   stock       Stock[]
+  movementLines MovementLine[]
 }
 
 model Warehouse {
@@ -96,11 +97,12 @@ model Movement {
 }
 
 model MovementLine {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   movementId      String
   productId       String
   fromWarehouseId String?
   toWarehouseId   String?
   quantity        Float
-  movement        Movement @relation(fields: [movementId], references: [id], onDelete: Cascade)
+  movement        Movement  @relation(fields: [movementId], references: [id], onDelete: Cascade)
+  product         Product   @relation(fields: [productId], references: [id])
 }
