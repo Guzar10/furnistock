@@ -1,13 +1,106 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  OPERATOR
+}
+
+enum ProductType {
+  MATERIE_PRIMA
+  GATA_ASAMBLARE
+  ASAMBLAT
+}
+
+enum Unit {
+  BUC
+  MP
+  ML
+  KG
+  M3
+  L
+}
+
+enum MovementType {
+  RECEPTIE
+  PRODUCTIE
+  VANZARE
+  TRANSFER
+  DESEURI
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         Role       @default(OPERATOR)
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  movements    Movement[]
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  type        ProductType
+  unit        Unit        @default(BUC)
+  description String?
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  stock       Stock[]
+}
+
+model Warehouse {
+  id          String     @id @default(cuid())
+  name        String
+  code        String     @unique
+  location    String?
+  description String?
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  stock       Stock[]
+}
+
+model Stock {
+  id          String    @id @default(cuid())
+  productId   String
+  warehouseId String
+  quantity    Float     @default(0)
+  updatedAt   DateTime  @updatedAt
+  product     Product   @relation(fields: [productId], references: [id])
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+
+  @@unique([productId, warehouseId])
+}
+
+model Movement {
+  id        String         @id @default(cuid())
+  type      MovementType
+  date      DateTime       @default(now())
+  note      String?
+  userId    String
+  user      User           @relation(fields: [userId], references: [id])
+  createdAt DateTime       @default(now())
+  lines     MovementLine[]
+}
+
+model MovementLine {
+  id              String   @id @default(cuid())
+  movementId      String
+  productId       String
+  fromWarehouseId String?
+  toWarehouseId   String?
+  quantity        Float
+  movement        Movement @relation(fields: [movementId], references: [id], onDelete: Cascade)
 }
