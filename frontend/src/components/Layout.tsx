@@ -1,22 +1,21 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { useThemeStore } from '../store/themeStore'
 
 const nav = [
-  { to: '/dashboard',  label: 'Dashboard',       icon: '▦' },
-  { to: '/products',   label: 'Produse',          icon: '⬡' },
-  { to: '/warehouses', label: 'Hale & Depozite',  icon: '⬢' },
-  { to: '/stock',      label: 'Stoc Curent',      icon: '≡' },
-  { to: '/movements',  label: 'Mișcări Stoc',     icon: '⇄' },
+  { to: '/dashboard',  label: 'Dashboard',      icon: '▦' },
+  { to: '/products',   label: 'Produse',         icon: '⬡' },
+  { to: '/warehouses', label: 'Hale & Depozite', icon: '⬢' },
+  { to: '/stock',      label: 'Stoc Curent',     icon: '≡' },
+  { to: '/movements',  label: 'Mișcări Stoc',    icon: '⇄' },
 ]
 
 export default function Layout() {
   const { user, clearAuth } = useAuthStore()
+  const { theme, toggleTheme } = useThemeStore()
   const navigate = useNavigate()
 
-  const handleLogout = () => {
-    clearAuth()
-    navigate('/login')
-  }
+  const handleLogout = () => { clearAuth(); navigate('/login') }
 
   return (
     <div className="flex h-screen overflow-hidden bg-bg">
@@ -80,10 +79,20 @@ export default function Layout() {
         <div className="p-4 border-t border-border">
           <div className="text-xs text-text-2 font-medium truncate">{user?.name}</div>
           <div className="text-[11px] text-text-3 mb-3 truncate">{user?.email}</div>
-          <RoleBadge role={user?.role} />
+          <div className="flex items-center justify-between mb-3">
+            <RoleBadge role={user?.role} />
+            {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Activează tema light' : 'Activează tema dark'}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-bg-surface2 border border-border hover:border-border-2 transition-all text-text-2 hover:text-text text-xs"
+            >
+              {theme === 'dark' ? '☀ Light' : '☾ Dark'}
+            </button>
+          </div>
           <button
             onClick={handleLogout}
-            className="mt-3 w-full text-xs text-text-3 hover:text-danger transition-colors text-left"
+            className="w-full text-xs text-text-3 hover:text-danger transition-colors text-left"
           >
             → Deconectare
           </button>
