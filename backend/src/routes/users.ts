@@ -62,4 +62,19 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
   res.json({ success: true })
 })
 
+// PUT /users/:id/reset-password — doar ADMIN
+router.put('/:id/reset-password', async (req: AuthRequest, res: Response) => {
+  const { password } = req.body
+  if (!password || password.length < 6) {
+    res.status(400).json({ error: 'Parola trebuie să aibă minim 6 caractere' })
+    return
+  }
+  const user = await prisma.user.update({
+    where: { id: req.params.id },
+    data: { passwordHash: await bcrypt.hash(password, 10) },
+    select: { id: true, name: true, email: true, role: true },
+  })
+  res.json({ success: true, user })
+})
+
 export default router
