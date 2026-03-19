@@ -1,7 +1,12 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
-import authRouter from './routes/auth'
+import authRouter      from './routes/auth'
+import productsRouter  from './routes/products'
+import warehousesRouter from './routes/warehouses'
+import stockRouter     from './routes/stock'
+import movementsRouter from './routes/movements'
+import usersRouter     from './routes/users'
 import { errorHandler } from './middleware/errorHandler'
 
 dotenv.config()
@@ -16,7 +21,12 @@ app.get('/health', (_, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-app.use('/auth', authRouter)
+app.use('/auth',       authRouter)
+app.use('/products',   productsRouter)
+app.use('/warehouses', warehousesRouter)
+app.use('/stock',      stockRouter)
+app.use('/movements',  movementsRouter)
+app.use('/users',      usersRouter)
 
 app.use(errorHandler)
 
