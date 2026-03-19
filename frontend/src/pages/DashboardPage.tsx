@@ -8,10 +8,9 @@ import { movementTypeBadge } from '../components/ui/Badge'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
-  const { data: products   = [] } = useQuery({ queryKey: ['products'],         queryFn: getProducts })
-  const { data: warehouses = [] } = useQuery({ queryKey: ['warehouses'],        queryFn: getWarehouses })
-  const { data: movements  = [] } = useQuery({ queryKey: ['movements'],         queryFn: () => getMovements({ limit: 10 }) })
-  const { data: summary    = [] } = useQuery({ queryKey: ['stock-summary'],     queryFn: getWarehouseSummary })
+  const { data: products   = [] } = useQuery({ queryKey: ['products'],     queryFn: getProducts })
+  const { data: movements  = [] } = useQuery({ queryKey: ['movements'],     queryFn: () => getMovements({ limit: 10 }) })
+  const { data: summary    = [] } = useQuery({ queryKey: ['stock-summary'], queryFn: getWarehouseSummary })
 
   const activeProducts = products.filter(p => (p.stock || []).some(s => s.quantity > 0)).length
   const lowStock = products.filter(p => {
@@ -21,28 +20,29 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-serif text-3xl font-light text-text">Dashboard</h1>
+      <div className="mb-5">
+        <h1 className="font-serif text-2xl md:text-3xl font-light text-text">Dashboard</h1>
         <p className="text-sm text-text-3 mt-1">Bun venit în FurniStock</p>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         <KpiCard label="Produse Catalog"  value={products.length}   sub={`${activeProducts} cu stoc activ`} accent="amber" />
-        <KpiCard label="Hale & Depozite"  value={warehouses.length} sub="locații active"                    accent="green" />
+        <KpiCard label="Hale & Depozite"  value={summary.length}    sub="locații active"                    accent="green" />
         <KpiCard label="Mișcări Total"    value={movements.length}  sub="înregistrate"                     accent="blue"  />
         <KpiCard label="Alertă Stoc"      value={lowStock.length}   sub="produse sub 15 unități"            accent={lowStock.length > 0 ? 'red' : 'green'} />
       </div>
 
       {/* Alert */}
       {lowStock.length > 0 && (
-        <div className="flex items-center justify-between bg-danger/5 border border-danger/15 rounded-xl px-5 py-3.5 mb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-danger/5 border border-danger/15 rounded-xl px-4 py-3 mb-5 gap-3">
           <p className="text-sm text-text-2">
             ⚠️ <strong className="text-danger">{lowStock.length} {lowStock.length > 1 ? 'produse au' : 'produs are'}</strong> stoc redus:{' '}
             {lowStock.slice(0, 3).map(p => p.name).join(', ')}
             {lowStock.length > 3 && ` +${lowStock.length - 3} altele`}
           </p>
-          <button onClick={() => navigate('/stock')} className="text-xs bg-danger/10 text-danger px-3 py-1.5 rounded-md hover:bg-danger/20 transition-colors whitespace-nowrap ml-4">
+          <button onClick={() => navigate('/stock')}
+            className="text-xs bg-danger/10 text-danger px-3 py-1.5 rounded-md hover:bg-danger/20 transition-colors whitespace-nowrap self-start sm:self-auto">
             Vezi stoc →
           </button>
         </div>
@@ -50,22 +50,22 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         {/* Mișcări recente */}
-        <div className="bg-bg-surface border border-border rounded-xl p-5">
+        <div className="bg-bg-surface border border-border rounded-xl p-4 md:p-5">
           <div className="flex justify-between items-center mb-4">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-text-3">Mișcări Recente</span>
             <button onClick={() => navigate('/movements')} className="text-xs text-text-3 hover:text-accent transition-colors">Toate →</button>
           </div>
           <div className="flex flex-col gap-1">
             {movements.slice(0, 8).map(m => (
-              <div key={m.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                <div className="flex items-center gap-3">
+              <div key={m.id} className="flex items-center justify-between py-2 border-b border-border last:border-0 gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   {movementTypeBadge(m.type)}
-                  <span className="text-xs text-text-2 truncate max-w-32">
+                  <span className="text-xs text-text-2 truncate">
                     {m.lines?.[0] ? (m.lines[0].product?.name || '—') : '—'}
                     {m.lines?.length > 1 && ` +${m.lines.length - 1}`}
                   </span>
                 </div>
-                <span className="font-mono text-[11px] text-text-3">
+                <span className="font-mono text-[11px] text-text-3 shrink-0">
                   {new Date(m.date).toLocaleDateString('ro-RO')}
                 </span>
               </div>
@@ -75,18 +75,18 @@ export default function DashboardPage() {
         </div>
 
         {/* Sumar hale */}
-        <div className="bg-bg-surface border border-border rounded-xl p-5">
+        <div className="bg-bg-surface border border-border rounded-xl p-4 md:p-5">
           <div className="flex justify-between items-center mb-4">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-text-3">Sumar Hale</span>
             <button onClick={() => navigate('/warehouses')} className="text-xs text-text-3 hover:text-accent transition-colors">Toate →</button>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             {summary.map(w => (
               <div key={w.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
-                <span className="font-mono text-[11px] bg-bg-surface3 px-2 py-0.5 rounded text-text-2 min-w-8 text-center">{w.code}</span>
+                <span className="font-mono text-[11px] bg-bg-surface3 px-2 py-0.5 rounded text-text-2 min-w-8 text-center shrink-0">{w.code}</span>
                 <span className="flex-1 text-sm text-text truncate">{w.name}</span>
-                <span className="font-mono text-sm text-accent font-medium">{w.productCount}</span>
-                <span className="text-xs text-text-3">prod.</span>
+                <span className="font-mono text-sm text-accent font-medium shrink-0">{w.productCount}</span>
+                <span className="text-xs text-text-3 shrink-0">prod.</span>
               </div>
             ))}
             {summary.length === 0 && <p className="text-sm text-text-3 text-center py-4">Nicio hală configurată</p>}
