@@ -8,6 +8,7 @@ import stockRouter     from './routes/stock'
 import movementsRouter from './routes/movements'
 import usersRouter     from './routes/users'
 import { errorHandler } from './middleware/errorHandler'
+import statsRouter from './routes/stats'
 
 dotenv.config()
 
@@ -27,6 +28,7 @@ app.use('/warehouses', warehousesRouter)
 app.use('/stock',      stockRouter)
 app.use('/movements',  movementsRouter)
 app.use('/users',      usersRouter)
+app.use('/stats', statsRouter)
 
 app.use(errorHandler)
 
