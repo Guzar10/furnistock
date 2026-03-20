@@ -104,4 +104,49 @@ router.post('/logout', authGuard, auditLog('LOGOUT'), async (req: AuthRequest, r
   res.json({ success: true })
 })
 
+// PUT /auth/change-password
+router.put('/change-password', authGuard, async (req: AuthRequest, res: Response) => {
+  const { currentPassword, newPassword } = req.body
+
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ error: 'Completează toate câmpurile' })
+    return
+  }
+
+  if (newPassword.length < 8) {
+    res.status(400).json({ error: 'Parola nouă trebuie să aibă minim 8 caractere' })
+    return
+  }
+
+  if (!/[A-Z]/.test(newPassword)) {
+    res.status(400).json({ error: 'Parola nouă trebuie să conțină cel puțin o literă mare' })
+    return
+  }
+
+  if (!/[0-9]/.test(newPassword)) {
+    res.status(400).json({ error: 'Parola nouă trebuie să conțină cel puțin o cifră' })
+    return
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: req.user!.userId } })
+  if (!user) {
+    res.status(404).json({ error: 'User negăsit' })
+    return
+  }
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash)
+  if (!valid) {
+    res.status(400).json({ error: 'Parola curentă este incorectă' })
+    return
+  }
+
+  await prisma.user.update({
+    where: { id: req.user!.userId },
+    data:  { passwordHash: await bcrypt.hash(newPassword, 10) },
+  })
+
+  console.log(`[AUTH] Parolă schimbată: userId ${req.user!.userId} | IP: ${req.ip}`)
+  res.json({ success: true })
+})
+
 export default router
