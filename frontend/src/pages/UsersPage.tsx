@@ -6,6 +6,7 @@ import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
+import { useToast } from '../components/ui/Toast'
 import { RoleBadge } from '../components/Layout'
 import type { User } from '../types'
 
@@ -21,6 +22,8 @@ const resetPassword  = async ({ id, password }: { id: string; password: string }
 export default function UsersPage() {
   const qc = useQueryClient()
   const { data: users = [], isLoading } = useQuery({ queryKey: ['users'], queryFn: getUsers })
+
+  const { showToast } = useToast()
 
   const [createOpen, setCreateOpen] = useState(false)
   const [resetUser,  setResetUser]  = useState<User | null>(null)
@@ -44,22 +47,34 @@ export default function UsersPage() {
     mutationFn: createUser,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] })
+      showToast('Cont creat cu succes!')
       setCreateOpen(false)
       resetCreate()
     },
+    onError: (err: any) => showToast(
+      err?.response?.data?.error || 'Eroare la crearea contului', 'error'
+    ),
   })
 
   const deleteMutation = useMutation({
     mutationFn: deleteUser,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+    onSuccess:  () => {
+      qc.invalidateQueries({ queryKey: ['users'] })
+      showToast('Contul a fost dezactivat', 'info')
+    },
+    onError: () => showToast('Eroare la dezactivarea contului', 'error'),
   })
 
   const resetMutation = useMutation({
     mutationFn: resetPassword,
     onSuccess: () => {
+      showToast('Parola a fost resetată cu succes!')
       setResetUser(null)
       resetResetForm()
     },
+    onError: (err: any) => showToast(
+      err?.response?.data?.error || 'Eroare la resetarea parolei', 'error'
+    ),
   })
 
   const onReset = (data: ResetFormData) => {

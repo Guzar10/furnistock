@@ -8,6 +8,7 @@ import Modal from '../components/ui/Modal'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import { productTypeBadge, unitLabel } from '../components/ui/Badge'
+import { useToast } from '../components/ui/Toast'
 import { getProducts, createProduct, updateProduct, deleteProduct } from '../api/products'
 import { exportProductsExcel } from '../lib/exportExcel'
 import { exportProductsPdf } from '../lib/exportPdf'
@@ -35,6 +36,8 @@ export default function ProductsPage() {
   const [search,     setSearch]     = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [alertOnly,  setAlertOnly]  = useState(false)
+  
+  const { showToast } = useToast()
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>()
 
@@ -43,12 +46,21 @@ export default function ProductsPage() {
       editing
         ? updateProduct(editing.id, { ...data, minStock: Number(data.minStock) })
         : createProduct({ ...data, minStock: Number(data.minStock) }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['products'] }); closeModal() },
+    onSuccess: (_, data) => {
+      qc.invalidateQueries({ queryKey: ['products'] })
+      showToast(editing ? `"${data.name}" actualizat cu succes!` : `"${data.name}" adăugat cu succes!`)
+      closeModal()
+    },
+    onError: () => showToast('Eroare la salvarea produsului', 'error'),
   })
 
   const deleteMutation = useMutation({
     mutationFn: deleteProduct,
-    onSuccess:  () => qc.invalidateQueries({ queryKey: ['products'] }),
+    onSuccess:  () => {
+      qc.invalidateQueries({ queryKey: ['products'] })
+      showToast('Produsul a fost șters', 'info')
+    },
+    onError: () => showToast('Eroare la ștergerea produsului', 'error'),
   })
 
   const openNew = () => {

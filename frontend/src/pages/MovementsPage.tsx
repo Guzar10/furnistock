@@ -4,6 +4,7 @@ import { useForm, useFieldArray } from 'react-hook-form'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import { movementTypeBadge, unitLabel } from '../components/ui/Badge'
+import { useToast } from '../components/ui/Toast'
 import { getMovements, createMovement, deleteMovement } from '../api/movements'
 import { getProducts } from '../api/products'
 import { getWarehouses } from '../api/warehouses'
@@ -52,6 +53,7 @@ export default function MovementsPage() {
 
   const [open,     setOpen]     = useState(false)
   const [moveType, setMoveType] = useState('')
+  const { showToast } = useToast()
 
   const { register, handleSubmit, control, reset } = useForm<any>({
     defaultValues: { lines: [{}], consumed: [{}], produced: [{}] },
@@ -67,13 +69,21 @@ export default function MovementsPage() {
       qc.invalidateQueries({ queryKey: ['stock'] })
       qc.invalidateQueries({ queryKey: ['stock-summary'] })
       qc.invalidateQueries({ queryKey: ['products'] })
+      showToast('Mișcare înregistrată cu succes!')
       closeModal()
     },
+    onError: (err: any) => showToast(
+      err?.response?.data?.error || 'Eroare la înregistrarea mișcării', 'error'
+    ),
   })
 
   const deleteMutation = useMutation({
     mutationFn: deleteMovement,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['movements'] }),
+    onSuccess:  () => {
+      qc.invalidateQueries({ queryKey: ['movements'] })
+      showToast('Mișcarea a fost ștearsă', 'info')
+    },
+    onError: () => showToast('Eroare la ștergerea mișcării', 'error'),
   })
 
   const openModal = () => {

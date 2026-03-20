@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import Input from '../components/ui/Input'
+import { useToast } from '../components/ui/Toast'
 import { getWarehouses, createWarehouse, updateWarehouse, deleteWarehouse } from '../api/warehouses'
 import { useAuthStore } from '../store/authStore'
 import type { Warehouse } from '../types'
@@ -15,6 +16,7 @@ export default function WarehousesPage() {
   const qc = useQueryClient()
   const navigate = useNavigate()
   const user = useAuthStore(s => s.user)
+  const { showToast } = useToast()
   const canEdit = user?.role === 'ADMIN' || user?.role === 'MANAGER'
 
   const { data: warehouses = [], isLoading } = useQuery({ queryKey: ['warehouses'], queryFn: getWarehouses })
@@ -26,16 +28,22 @@ export default function WarehousesPage() {
   const saveMutation = useMutation({
     mutationFn: (data: FormData) =>
       editing ? updateWarehouse(editing.id, data) : createWarehouse(data),
-    onSuccess: () => {
+    onSuccess: (_, data) => {
       qc.invalidateQueries({ queryKey: ['warehouses'] })
       qc.invalidateQueries({ queryKey: ['stock-summary'] })
+      showToast(editing ? `"${data.name}" actualizată!` : `"${data.name}" adăugată cu succes!`)
       closeModal()
     },
+    onError: () => showToast('Eroare la salvarea hălii', 'error'),
   })
 
   const deleteMutation = useMutation({
     mutationFn: deleteWarehouse,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['warehouses'] }),
+    onSuccess:  () => {
+      qc.invalidateQueries({ queryKey: ['warehouses'] })
+      showToast('Hala a fost ștearsă', 'info')
+    },
+    onError: () => showToast('Eroare la ștergerea hălii', 'error'),
   })
 
   const openNew = () => {
