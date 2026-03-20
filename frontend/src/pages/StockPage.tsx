@@ -15,6 +15,11 @@ export default function StockPage() {
   const [search,      setSearch]     = useState('')
   const [typeFilter,  setTypeFilter] = useState('')
   const [whFilter,    setWhFilter]   = useState(searchParams.get('warehouseId') || '')
+  const [page, setPage] = useState(1)
+
+  const handleSearch     = (v: string) => { setSearch(v);     setPage(1) }
+  const handleWhFilter   = (v: string) => { setWhFilter(v);   setPage(1) }
+  const handleTypeFilter = (v: string) => { setTypeFilter(v); setPage(1) }
 
   const { data: stock      = [], isLoading } = useQuery({
     queryKey: ['stock', whFilter, typeFilter],
@@ -87,17 +92,17 @@ export default function StockPage() {
 
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
         <input
-          value={search} onChange={e => setSearch(e.target.value)}
+          value={search} onChange={e => handleSearch(e.target.value)}
           placeholder="🔍  Caută produs..."
           className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text placeholder:text-text-3 outline-none focus:border-accent w-full sm:w-56"
         />
         <div className="flex gap-2 flex-1">
-          <select value={whFilter} onChange={e => setWhFilter(e.target.value)}
+          <select value={whFilter} onChange={e => handleWhFilter(e.target.value)}
             className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent cursor-pointer flex-1 min-w-0">
             <option value="">Toate halele</option>
             {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
           </select>
-          <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+          <select value={typeFilter} onChange={e => handleTypeFilter(e.target.value)}
             className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent cursor-pointer flex-1 min-w-0">
             <option value="">Toate tipurile</option>
             <option value="MATERIE_PRIMA">🪵 Mat. Primă</option>
@@ -105,7 +110,7 @@ export default function StockPage() {
             <option value="ASAMBLAT">🛋️ Asamblat</option>
           </select>
           {(search || whFilter || typeFilter) && (
-            <Button size="sm" onClick={() => { setSearch(''); setWhFilter(''); setTypeFilter('') }}>✕</Button>
+            <Button size="sm" onClick={() => { handleSearch(''); handleWhFilter(''); handleTypeFilter('') }}>✕</Button>
           )}
         </div>
       </div>
@@ -113,7 +118,15 @@ export default function StockPage() {
       <div className="bg-bg-surface border border-border rounded-xl">
         {isLoading
           ? <div className="p-10 text-center text-text-3">Se încarcă...</div>
-          : <Table columns={columns} data={filtered} keyFn={s => s.id} empty="Niciun stoc găsit" />
+          : <Table
+              columns={columns}
+              data={filtered}
+              keyFn={s => s.id}
+              empty="Niciun stoc găsit"
+              page={page}
+              perPage={25}
+              onPageChange={setPage}
+            />
         }
       </div>
     </div>

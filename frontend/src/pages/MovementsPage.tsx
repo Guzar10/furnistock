@@ -5,6 +5,7 @@ import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import { movementTypeBadge, unitLabel } from '../components/ui/Badge'
 import { useToast } from '../components/ui/Toast'
+import Pagination from '../components/ui/Pagination'
 import { getMovements, createMovement, deleteMovement } from '../api/movements'
 import { getProducts } from '../api/products'
 import { getWarehouses } from '../api/warehouses'
@@ -37,6 +38,10 @@ export default function MovementsPage() {
   const [dateFrom,       setDateFrom]       = useState(thisMonth())
   const [dateTo,         setDateTo]         = useState(today())
   const [activeShortcut, setActiveShortcut] = useState('Luna asta')
+  const [page, setPage] = useState(1)
+  const PER_PAGE = 30
+  const handleSearch     = (v: string) => { setSearch(v);     setPage(1) }
+  const handleTypeFilter = (v: string) => { setTypeFilter(v); setPage(1) }
 
   const { data: movements  = [], isLoading } = useQuery({
     queryKey: ['movements', typeFilter, dateFrom, dateTo],
@@ -289,7 +294,7 @@ export default function MovementsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((m: Movement) => (
+                  {filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE).map((m: Movement) => (
                     <tr key={m.id} className="border-b border-border hover:bg-bg-surface2 transition-colors last:border-0">
                       <td className="px-3 py-3 font-mono text-xs text-text-2 whitespace-nowrap">
                         {new Date(m.date).toLocaleDateString('ro-RO')}
@@ -324,7 +329,7 @@ export default function MovementsPage() {
 
             {/* Mobile */}
             <div className="md:hidden divide-y divide-border">
-              {filtered.map((m: Movement) => (
+              {filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE).map((m: Movement) => (
                 <div key={m.id} className="p-4 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     {movementTypeBadge(m.type)}
@@ -339,9 +344,6 @@ export default function MovementsPage() {
                         {' '}{l.product?.name}
                       </div>
                     ))}
-                    {(m.lines || []).length > 2 && (
-                      <div className="text-xs text-text-3">+{m.lines.length - 2} altele</div>
-                    )}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-text-3">{m.note || '—'}</span>
@@ -355,6 +357,14 @@ export default function MovementsPage() {
                 </div>
               ))}
             </div>
+
+            {/* Paginare */}
+            <Pagination
+              total={filtered.length}
+              page={page}
+              perPage={PER_PAGE}
+              onChange={setPage}
+            />
           </>
         )}
       </div>

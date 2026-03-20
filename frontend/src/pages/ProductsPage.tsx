@@ -36,10 +36,15 @@ export default function ProductsPage() {
   const [search,     setSearch]     = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [alertOnly,  setAlertOnly]  = useState(false)
+  const [page, setPage] = useState(1)
   
   const { showToast } = useToast()
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>()
+
+  const handleSearch     = (v: string) => { setSearch(v);     setPage(1) }
+  const handleTypeFilter = (v: string) => { setTypeFilter(v); setPage(1) }
+  const handleAlertOnly  = (v: boolean) => { setAlertOnly(v); setPage(1) }
 
   const saveMutation = useMutation({
     mutationFn: (data: FormData) =>
@@ -216,11 +221,11 @@ export default function ProductsPage() {
       {/* Filtre */}
       <div className="flex gap-2 mb-4 flex-wrap">
         <input
-          value={search} onChange={e => setSearch(e.target.value)}
+          value={search} onChange={e => handleSearch(e.target.value)}
           placeholder="🔍  Caută produs..."
           className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text placeholder:text-text-3 outline-none focus:border-accent w-full sm:w-56"
         />
-        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+        <select value={typeFilter} onChange={e => handleTypeFilter(e.target.value)}
           className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent cursor-pointer">
           <option value="">Toate tipurile</option>
           <option value="MATERIE_PRIMA">🪵 Materie Primă</option>
@@ -228,7 +233,7 @@ export default function ProductsPage() {
           <option value="ASAMBLAT">🛋️ Asamblat</option>
         </select>
         {(search || typeFilter || alertOnly) && (
-          <Button size="sm" onClick={() => { setSearch(''); setTypeFilter(''); setAlertOnly(false) }}>
+          <Button size="sm" onClick={() => { handleSearch(''); handleTypeFilter(''); handleAlertOnly(false) }}>
             ✕ Resetează
           </Button>
         )}
@@ -237,7 +242,15 @@ export default function ProductsPage() {
       <div className="bg-bg-surface border border-border rounded-xl">
         {isLoading
           ? <div className="p-10 text-center text-text-3">Se încarcă...</div>
-          : <Table columns={columns} data={filtered} keyFn={p => p.id} empty="Niciun produs găsit" />
+          : <Table
+              columns={columns}
+              data={filtered}
+              keyFn={p => p.id}
+              empty="Niciun produs găsit"
+              page={page}
+              perPage={20}
+              onPageChange={setPage}
+            />
         }
       </div>
 
