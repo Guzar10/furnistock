@@ -5,6 +5,8 @@ import { useThemeStore } from '../store/themeStore'
 import Modal from './ui/Modal'
 import Button from './ui/Button'
 import api from '../api/client'
+import { usePageTitle } from '../hooks/usePageTitle'
+
 
 const nav = [
   { to: '/dashboard',  label: 'Dashboard',      icon: '▦' },
@@ -19,6 +21,8 @@ export default function Layout() {
   const { theme, toggleTheme } = useThemeStore()
   const navigate               = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  usePageTitle()
+
 
   // Schimbare parolă
   const [pwOpen,       setPwOpen]       = useState(false)
