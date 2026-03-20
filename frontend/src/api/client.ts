@@ -4,14 +4,12 @@ const api = axios.create({
   baseURL: 'http://localhost:3001',
 })
 
-// Atașează token-ul la fiecare request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken')
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 
-// Refresh automat la 401
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
@@ -37,5 +35,15 @@ api.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+export const logout = async () => {
+  try {
+    await api.post('/auth/logout')
+  } catch { /* ignoră erori la logout */ }
+  finally {
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('refreshToken')
+  }
+}
 
 export default api

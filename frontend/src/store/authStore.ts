@@ -1,29 +1,29 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User } from '../types'
+import { logout as apiLogout } from '../api/client'
 
 interface AuthState {
-  user: User | null
-  accessToken: string | null
+  user:         User | null
+  accessToken:  string | null
   refreshToken: string | null
-  setAuth: (user: User, accessToken: string, refreshToken: string) => void
-  clearAuth: () => void
+  setAuth:  (user: User, accessToken: string, refreshToken: string) => void
+  clearAuth: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      user: null,
-      accessToken: null,
+      user:         null,
+      accessToken:  null,
       refreshToken: null,
       setAuth: (user, accessToken, refreshToken) => {
-        localStorage.setItem('accessToken', accessToken)
+        localStorage.setItem('accessToken',  accessToken)
         localStorage.setItem('refreshToken', refreshToken)
         set({ user, accessToken, refreshToken })
       },
-      clearAuth: () => {
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
+      clearAuth: async () => {
+        await apiLogout()
         set({ user: null, accessToken: null, refreshToken: null })
       },
     }),

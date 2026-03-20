@@ -1,18 +1,32 @@
 import { Request, Response, NextFunction } from 'express'
 import { verifyAccessToken, JwtPayload } from '../lib/jwt'
+import { prisma } from '../lib/prisma'
 
 export interface AuthRequest extends Request {
   user?: JwtPayload
 }
 
-export const authGuard = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authGuard = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const header = req.headers.authorization
   if (!header?.startsWith('Bearer ')) {
     res.status(401).json({ error: 'Token lipsă' })
     return
   }
   try {
-    req.user = verifyAccessToken(header.split(' ')[1])
+    const payload = verifyAccessToken(header.split(' ')[1])
+
+    // Verifică dacă userul mai e activ în DB
+    const user = await prisma.user.findUnique({
+      where:  { id: payload.userId },
+      select: { active: true, role: true },
+    })
+    if (!user || !user.active) {
+      res.status(401).json({ error: 'Cont dezactivat sau inexistent' })
+      return
+    }
+
+    // Folosește rolul din DB, nu din token (mai sigur)
+    req.user = { ...payload, role: user.role }
     next()
   } catch {
     res.status(401).json({ error: 'Token invalid sau expirat' })
