@@ -1,7 +1,7 @@
 export type Role = 'ADMIN' | 'MANAGER' | 'OPERATOR'
 export type ProductType = 'MATERIE_PRIMA' | 'GATA_ASAMBLARE' | 'ASAMBLAT'
 export type Unit = 'BUC' | 'MP' | 'ML' | 'KG' | 'M3' | 'L'
-export type MovementType = 'RECEPTIE' | 'PRODUCTIE' | 'VANZARE' | 'TRANSFER' | 'DESEURI'
+export type MovementType = 'RECEPTIE' | 'PRODUCTIE' | 'VANZARE' | 'TRANSFER' | 'DESEURI' | 'INVENTARIERE'
 
 export type User = {
   id: string

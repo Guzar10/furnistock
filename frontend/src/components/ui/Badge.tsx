@@ -29,11 +29,12 @@ export const productTypeBadge = (type: string) => {
 
 export const movementTypeBadge = (type: string) => {
   const map: Record<string, [Color, string]> = {
-    RECEPTIE:  ['green',  '📥 Recepție'],
-    PRODUCTIE: ['amber',  '⚙️ Producție'],
-    VANZARE:   ['blue',   '📤 Vânzare'],
-    TRANSFER:  ['purple', '🔄 Transfer'],
-    DESEURI:   ['red',    '🗑️ Deșeuri'],
+    RECEPTIE:     ['green',  '📥 Recepție'],
+    PRODUCTIE:    ['amber',  '⚙️ Producție'],
+    VANZARE:      ['blue',   '📤 Vânzare'],
+    TRANSFER:     ['purple', '🔄 Transfer'],
+    DESEURI:      ['red',    '🗑️ Deșeuri'],
+    INVENTARIERE: ['gray',   '📋 Inventariere'],
   }
   const [color, label] = map[type] || ['gray', type]
   return <Badge color={color}>{label}</Badge>

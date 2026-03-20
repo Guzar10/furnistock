@@ -7,7 +7,7 @@ const router = Router()
 router.use(authGuard)
 
 const LineSchema = z.object({
-  productId:      z.string(),
+  productId:       z.string(),
   fromWarehouseId: z.string().optional(),
   toWarehouseId:   z.string().optional(),
   quantity:        z.number().positive(),
@@ -21,22 +21,22 @@ const MovementSchema = z.discriminatedUnion('type', [
     lines: z.array(LineSchema.extend({ toWarehouseId: z.string() })).min(1),
   }),
   z.object({
-    type:     z.literal('VANZARE'),
-    date:     z.string().optional(),
-    note:     z.string().optional(),
-    lines:    z.array(LineSchema.extend({ fromWarehouseId: z.string() })).min(1),
+    type:  z.literal('VANZARE'),
+    date:  z.string().optional(),
+    note:  z.string().optional(),
+    lines: z.array(LineSchema.extend({ fromWarehouseId: z.string() })).min(1),
   }),
   z.object({
-    type:     z.literal('DESEURI'),
-    date:     z.string().optional(),
-    note:     z.string().optional(),
-    lines:    z.array(LineSchema.extend({ fromWarehouseId: z.string() })).min(1),
+    type:  z.literal('DESEURI'),
+    date:  z.string().optional(),
+    note:  z.string().optional(),
+    lines: z.array(LineSchema.extend({ fromWarehouseId: z.string() })).min(1),
   }),
   z.object({
-    type:            z.literal('TRANSFER'),
-    date:            z.string().optional(),
-    note:            z.string().optional(),
-    lines:           z.array(LineSchema.extend({
+    type:  z.literal('TRANSFER'),
+    date:  z.string().optional(),
+    note:  z.string().optional(),
+    lines: z.array(LineSchema.extend({
       fromWarehouseId: z.string(),
       toWarehouseId:   z.string(),
     })).min(1),
@@ -46,14 +46,23 @@ const MovementSchema = z.discriminatedUnion('type', [
     date:     z.string().optional(),
     note:     z.string().optional(),
     consumed: z.array(LineSchema.extend({ fromWarehouseId: z.string() })).min(1),
-    produced: z.array(LineSchema.extend({ toWarehouseId: z.string() })).min(1),
+    produced: z.array(LineSchema.extend({ toWarehouseId:   z.string() })).min(1),
+  }),
+  z.object({
+    type:  z.literal('INVENTARIERE'),
+    date:  z.string().optional(),
+    note:  z.string().optional(),
+    lines: z.array(z.object({
+      productId:       z.string(),
+      toWarehouseId:   z.string(),
+      quantityActuala: z.number().min(0),
+    })).min(1),
   }),
 ])
 
 // GET /movements
 router.get('/', async (req, res: Response) => {
   const { type, limit = '100', dateFrom, dateTo } = req.query
-
   try {
     const movements = await prisma.movement.findMany({
       where: {
@@ -91,59 +100,35 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     return
   }
 
-  const data = parsed.data
+  const data   = parsed.data
   const userId = req.user!.userId
 
   try {
     const movement = await prisma.$transaction(async (tx) => {
-      // Construiește liniile în funcție de tip
       let lines: any[] = []
 
       if (data.type === 'PRODUCTIE') {
         lines = [
-          ...data.consumed.map(l => ({ ...l, fromWarehouseId: l.fromWarehouseId })),
-          ...data.produced.map(l => ({ ...l, toWarehouseId:   l.toWarehouseId })),
+          ...data.consumed.map(l => ({ ...l })),
+          ...data.produced.map(l => ({ ...l })),
         ]
-      } else {
-        lines = data.lines
-      }
-
-      // Verifică și ajustează stocurile
-      for (const line of lines) {
-        const isOut =
-          data.type === 'VANZARE'   ||
-          data.type === 'DESEURI'   ||
-          (data.type === 'TRANSFER'  && line.fromWarehouseId) ||
-          (data.type === 'PRODUCTIE' && line.fromWarehouseId)
-
-        const warehouseId = line.fromWarehouseId || line.toWarehouseId
-
-        if (isOut && line.fromWarehouseId) {
-          const stock = await tx.stock.findUnique({
+      } else if (data.type === 'INVENTARIERE') {
+        // Procesează inventarierea
+        const invLines = []
+        for (const line of data.lines) {
+          const stocCurent = await tx.stock.findUnique({
             where: {
               productId_warehouseId: {
                 productId:   line.productId,
-                warehouseId: line.fromWarehouseId,
+                warehouseId: line.toWarehouseId,
               },
             },
           })
-          if (!stock || stock.quantity < line.quantity) {
-            throw new Error(
-              `Stoc insuficient pentru produsul ${line.productId} în hala ${line.fromWarehouseId}`
-            )
-          }
-          await tx.stock.update({
-            where: {
-              productId_warehouseId: {
-                productId:   line.productId,
-                warehouseId: line.fromWarehouseId,
-              },
-            },
-            data: { quantity: { decrement: line.quantity } },
-          })
-        }
+          const cantCurenta = stocCurent?.quantity || 0
+          const cantActuala = line.quantityActuala
+          const diferenta   = cantActuala - cantCurenta
 
-        if (line.toWarehouseId) {
+          // Setează cantitatea exactă
           await tx.stock.upsert({
             where: {
               productId_warehouseId: {
@@ -154,34 +139,111 @@ router.post('/', async (req: AuthRequest, res: Response) => {
             create: {
               productId:   line.productId,
               warehouseId: line.toWarehouseId,
-              quantity:    line.quantity,
+              quantity:    cantActuala,
             },
-            update: { quantity: { increment: line.quantity } },
+            update: { quantity: cantActuala },
+          })
+
+          invLines.push({
+            productId:       line.productId,
+            toWarehouseId:   line.toWarehouseId,
+            fromWarehouseId: null,
+            quantity:        Math.abs(diferenta) || 0,
           })
         }
+
+        return tx.movement.create({
+          data: {
+            type:   data.type,
+            date:   data.date ? new Date(data.date) : new Date(),
+            note:   data.note,
+            userId,
+            lines: {
+              create: invLines,
+            },
+          },
+          include: {
+            lines: true,
+            user:  { select: { id: true, name: true } },
+          },
+        })
+      } else {
+        lines = (data as any).lines
       }
 
-      // Creează mișcarea în DB
-      return tx.movement.create({
-        data: {
-          type:   data.type,
-          date:   data.date ? new Date(data.date) : new Date(),
-          note:   data.note,
-          userId,
-          lines: {
-            create: lines.map(l => ({
-              productId:       l.productId,
-              fromWarehouseId: l.fromWarehouseId ?? null,
-              toWarehouseId:   l.toWarehouseId   ?? null,
-              quantity:        l.quantity,
-            })),
+      if (data.type !== 'INVENTARIERE') {
+        // Verifică și ajustează stocuri pentru celelalte tipuri
+        for (const line of lines) {
+          const isOut =
+            data.type === 'VANZARE'   ||
+            data.type === 'DESEURI'   ||
+            (data.type === 'TRANSFER'  && line.fromWarehouseId) ||
+            (data.type === 'PRODUCTIE' && line.fromWarehouseId)
+
+          if (isOut && line.fromWarehouseId) {
+            const stock = await tx.stock.findUnique({
+              where: {
+                productId_warehouseId: {
+                  productId:   line.productId,
+                  warehouseId: line.fromWarehouseId,
+                },
+              },
+            })
+            if (!stock || stock.quantity < line.quantity) {
+              throw new Error(
+                `Stoc insuficient pentru produsul ${line.productId} în hala ${line.fromWarehouseId}`
+              )
+            }
+            await tx.stock.update({
+              where: {
+                productId_warehouseId: {
+                  productId:   line.productId,
+                  warehouseId: line.fromWarehouseId,
+                },
+              },
+              data: { quantity: { decrement: line.quantity } },
+            })
+          }
+
+          if (line.toWarehouseId) {
+            await tx.stock.upsert({
+              where: {
+                productId_warehouseId: {
+                  productId:   line.productId,
+                  warehouseId: line.toWarehouseId,
+                },
+              },
+              create: {
+                productId:   line.productId,
+                warehouseId: line.toWarehouseId,
+                quantity:    line.quantity,
+              },
+              update: { quantity: { increment: line.quantity } },
+            })
+          }
+        }
+
+        return tx.movement.create({
+          data: {
+            type:   data.type,
+            date:   data.date ? new Date(data.date) : new Date(),
+            note:   data.note,
+            userId,
+            lines: {
+              create: lines.map(l => ({
+                productId:       l.productId,
+                fromWarehouseId: l.fromWarehouseId ?? null,
+                toWarehouseId:   l.toWarehouseId   ?? null,
+                quantity:        l.quantity,
+              })),
+            },
           },
-        },
-        include: {
-          lines: true,
-          user:  { select: { id: true, name: true } },
-        },
-      })
+          include: {
+            lines: true,
+            user:  { select: { id: true, name: true } },
+          },
+        })
+      }
     })
 
     res.status(201).json(movement)

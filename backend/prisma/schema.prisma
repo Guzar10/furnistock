@@ -34,6 +34,7 @@ enum MovementType {
   VANZARE
   TRANSFER
   DESEURI
+  INVENTARIERE
 }
 
 model User {
