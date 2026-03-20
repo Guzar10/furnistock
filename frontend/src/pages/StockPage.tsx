@@ -6,6 +6,8 @@ import Button from '../components/ui/Button'
 import { productTypeBadge, unitLabel } from '../components/ui/Badge'
 import { getStock } from '../api/stock'
 import { getWarehouses } from '../api/warehouses'
+import { exportStockExcel } from '../lib/exportExcel'
+import { exportStockPdf } from '../lib/exportPdf'
 import type { StockEntry } from '../types'
 
 export default function StockPage() {
@@ -14,8 +16,11 @@ export default function StockPage() {
   const [typeFilter,  setTypeFilter] = useState('')
   const [whFilter,    setWhFilter]   = useState(searchParams.get('warehouseId') || '')
 
-  const { data: stock      = [], isLoading } = useQuery({ queryKey: ['stock', whFilter, typeFilter], queryFn: () => getStock({ warehouseId: whFilter || undefined, type: typeFilter || undefined }) })
-  const { data: warehouses = [] }            = useQuery({ queryKey: ['warehouses'], queryFn: getWarehouses })
+  const { data: stock      = [], isLoading } = useQuery({
+    queryKey: ['stock', whFilter, typeFilter],
+    queryFn:  () => getStock({ warehouseId: whFilter || undefined, type: typeFilter || undefined }),
+  })
+  const { data: warehouses = [] } = useQuery({ queryKey: ['warehouses'], queryFn: getWarehouses })
 
   const filtered = stock.filter(s =>
     !search || s.product.name.toLowerCase().includes(search.toLowerCase())
@@ -44,7 +49,9 @@ export default function StockPage() {
     {
       key: 'quantity', header: 'Cantitate',
       render: (s: StockEntry) => (
-        <span className={`font-mono text-lg font-medium ${s.quantity < 5 ? 'text-danger' : s.quantity < 15 ? 'text-accent' : 'text-success'}`}>
+        <span className={`font-mono text-lg font-medium ${
+          s.quantity < 5 ? 'text-danger' : s.quantity < 15 ? 'text-accent' : 'text-success'
+        }`}>
           {s.quantity}
         </span>
       ),
@@ -64,6 +71,17 @@ export default function StockPage() {
           <p className="text-sm text-text-3 mt-1">
             {filtered.length} înregistrări{whFilter ? ` în ${warehouses.find(w => w.id === whFilter)?.name}` : ' totale'}
           </p>
+        </div>
+        {/* Export buttons */}
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={() => exportStockExcel(filtered)}
+            disabled={filtered.length === 0}>
+            ⬇ Excel
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => exportStockPdf(filtered)}
+            disabled={filtered.length === 0}>
+            ⬇ PDF
+          </Button>
         </div>
       </div>
 

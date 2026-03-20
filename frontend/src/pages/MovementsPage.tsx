@@ -9,6 +9,8 @@ import { getProducts } from '../api/products'
 import { getWarehouses } from '../api/warehouses'
 import { useAuthStore } from '../store/authStore'
 import type { Movement } from '../types'
+import { exportMovementsExcel } from '../lib/exportExcel'
+import { exportMovementsPdf } from '../lib/exportPdf'
 
 const TYPES = [
   { id: 'RECEPTIE',  label: 'Recepție',  icon: '📥', desc: 'Marfă cumpărată' },
@@ -159,12 +161,20 @@ export default function MovementsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="font-serif text-2xl md:text-3xl font-light">Mișcări de Stoc</h1>
-          <p className="text-sm text-text-3 mt-1">{filtered.length} mișcări în intervalul selectat</p>
-        </div>
-        <Button variant="primary" onClick={openModal}>+ Mișcare Nouă</Button>
-      </div>
+  <div>
+    <h1 className="font-serif text-2xl md:text-3xl font-light">Mișcări de Stoc</h1>
+    <p className="text-sm text-text-3 mt-1">{filtered.length} mișcări în intervalul selectat</p>
+  </div>
+  <div className="flex gap-2">
+    <Button variant="ghost" size="sm" onClick={() => exportMovementsExcel(filtered)} disabled={filtered.length === 0}>
+      ⬇ Excel
+    </Button>
+    <Button variant="ghost" size="sm" onClick={() => exportMovementsPdf(filtered, dateFrom, dateTo)} disabled={filtered.length === 0}>
+      ⬇ PDF
+    </Button>
+    <Button variant="primary" onClick={openModal}>+ Mișcare Nouă</Button>
+  </div>
+</div>
 
       {/* Stats rapide */}
       <div className="grid grid-cols-5 gap-2 mb-5">

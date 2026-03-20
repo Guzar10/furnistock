@@ -10,6 +10,8 @@ import { productTypeBadge, unitLabel } from '../components/ui/Badge'
 import { getProducts, createProduct, updateProduct, deleteProduct } from '../api/products'
 import { useAuthStore } from '../store/authStore'
 import type { Product } from '../types'
+import { exportProductsExcel } from '../lib/exportExcel'
+import { exportProductsPdf } from '../lib/exportPdf'
 
 type FormData = {
   name:        string
@@ -148,12 +150,20 @@ export default function ProductsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-serif text-2xl md:text-3xl font-light">Catalog Produse</h1>
-          <p className="text-sm text-text-3 mt-1">{products.length} produse înregistrate</p>
-        </div>
-        {canEdit && <Button variant="primary" onClick={openNew}>+ Produs Nou</Button>}
-      </div>
+  <div>
+    <h1 className="font-serif text-2xl md:text-3xl font-light">Catalog Produse</h1>
+    <p className="text-sm text-text-3 mt-1">{products.length} produse înregistrate</p>
+  </div>
+  <div className="flex gap-2">
+    <Button variant="ghost" size="sm" onClick={() => exportProductsExcel(filtered)} disabled={filtered.length === 0}>
+      ⬇ Excel
+    </Button>
+    <Button variant="ghost" size="sm" onClick={() => exportProductsPdf(filtered)} disabled={filtered.length === 0}>
+      ⬇ PDF
+    </Button>
+    {canEdit && <Button variant="primary" onClick={openNew}>+ Produs Nou</Button>}
+  </div>
+</div>
 
       {/* Alert banner */}
       {lowCount > 0 && (
