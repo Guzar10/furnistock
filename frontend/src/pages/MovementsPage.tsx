@@ -8,9 +8,9 @@ import { getMovements, createMovement, deleteMovement } from '../api/movements'
 import { getProducts } from '../api/products'
 import { getWarehouses } from '../api/warehouses'
 import { useAuthStore } from '../store/authStore'
-import type { Movement } from '../types'
 import { exportMovementsExcel } from '../lib/exportExcel'
 import { exportMovementsPdf } from '../lib/exportPdf'
+import type { Movement } from '../types'
 
 const TYPES = [
   { id: 'RECEPTIE',  label: 'Recepție',  icon: '📥', desc: 'Marfă cumpărată' },
@@ -161,20 +161,20 @@ export default function MovementsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
-  <div>
-    <h1 className="font-serif text-2xl md:text-3xl font-light">Mișcări de Stoc</h1>
-    <p className="text-sm text-text-3 mt-1">{filtered.length} mișcări în intervalul selectat</p>
-  </div>
-  <div className="flex gap-2">
-    <Button variant="ghost" size="sm" onClick={() => exportMovementsExcel(filtered)} disabled={filtered.length === 0}>
-      ⬇ Excel
-    </Button>
-    <Button variant="ghost" size="sm" onClick={() => exportMovementsPdf(filtered, dateFrom, dateTo)} disabled={filtered.length === 0}>
-      ⬇ PDF
-    </Button>
-    <Button variant="primary" onClick={openModal}>+ Mișcare Nouă</Button>
-  </div>
-</div>
+        <div>
+          <h1 className="font-serif text-2xl md:text-3xl font-light">Mișcări de Stoc</h1>
+          <p className="text-sm text-text-3 mt-1">{filtered.length} mișcări în intervalul selectat</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={() => exportMovementsExcel(filtered)} disabled={filtered.length === 0}>
+            ⬇ Excel
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => exportMovementsPdf(filtered, dateFrom, dateTo)} disabled={filtered.length === 0}>
+            ⬇ PDF
+          </Button>
+          <Button variant="primary" onClick={openModal}>+ Mișcare Nouă</Button>
+        </div>
+      </div>
 
       {/* Stats rapide */}
       <div className="grid grid-cols-5 gap-2 mb-5">
@@ -182,29 +182,36 @@ export default function MovementsPage() {
           <div key={t.id} className="bg-bg-surface border border-border rounded-xl p-3 text-center">
             <div className="text-xl mb-1">{t.icon}</div>
             <div className="font-mono text-xl font-medium text-text">{t.count}</div>
-            <div className="text-[10px] text-text-3 uppercase tracking-wide mt-0.5">{t.label}</div>
+            <div className="text-[10px] text-text-3 uppercase tracking-wide mt-0.5 hidden sm:block">{t.label}</div>
           </div>
         ))}
       </div>
 
       {/* Filtre */}
       <div className="bg-bg-surface border border-border rounded-xl p-4 mb-4">
-        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <span className="text-xs text-text-3 shrink-0">De la</span>
-            <input
-              type="date" value={dateFrom}
-              onChange={e => { setDateFrom(e.target.value); setActiveShortcut('') }}
-              className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent flex-1 min-w-0"
-            />
-            <span className="text-xs text-text-3 shrink-0">până la</span>
-            <input
-              type="date" value={dateTo}
-              onChange={e => { setDateTo(e.target.value); setActiveShortcut('') }}
-              className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent flex-1 min-w-0"
-            />
+        <div className="flex flex-col gap-3">
+
+          {/* Interval dată — stivuit pe mobile */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:flex-1">
+              <span className="text-xs text-text-3 shrink-0 w-10">De la</span>
+              <input
+                type="date" value={dateFrom}
+                onChange={e => { setDateFrom(e.target.value); setActiveShortcut('') }}
+                className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent flex-1 min-w-0"
+              />
+            </div>
+            <div className="flex items-center gap-2 w-full sm:flex-1">
+              <span className="text-xs text-text-3 shrink-0 w-10">Până la</span>
+              <input
+                type="date" value={dateTo}
+                onChange={e => { setDateTo(e.target.value); setActiveShortcut('') }}
+                className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent flex-1 min-w-0"
+              />
+            </div>
           </div>
 
+          {/* Shortcut-uri */}
           <div className="flex gap-1.5 flex-wrap">
             {shortcuts.map(s => (
               <button
@@ -220,22 +227,25 @@ export default function MovementsPage() {
               </button>
             ))}
           </div>
-        </div>
 
-        <div className="flex gap-2 mt-3 flex-wrap">
-          <input
-            value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="🔍  Caută în mișcări..."
-            className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text placeholder:text-text-3 outline-none focus:border-accent w-full sm:w-56"
-          />
-          <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
-            className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent cursor-pointer">
-            <option value="">Toate tipurile</option>
-            {TYPES.map(t => <option key={t.id} value={t.id}>{t.icon} {t.label}</option>)}
-          </select>
-          {(search || typeFilter) && (
-            <Button size="sm" onClick={() => { setSearch(''); setTypeFilter('') }}>✕ Resetează</Button>
-          )}
+          {/* Căutare + tip */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="🔍  Caută în mișcări..."
+              className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text placeholder:text-text-3 outline-none focus:border-accent w-full sm:w-56"
+            />
+            <div className="flex gap-2 flex-1">
+              <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+                className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent cursor-pointer flex-1">
+                <option value="">Toate tipurile</option>
+                {TYPES.map(t => <option key={t.id} value={t.id}>{t.icon} {t.label}</option>)}
+              </select>
+              {(search || typeFilter) && (
+                <Button size="sm" onClick={() => { setSearch(''); setTypeFilter('') }}>✕</Button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -311,6 +321,9 @@ export default function MovementsPage() {
                         {' '}{l.product?.name}
                       </div>
                     ))}
+                    {(m.lines || []).length > 2 && (
+                      <div className="text-xs text-text-3">+{m.lines.length - 2} altele</div>
+                    )}
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-text-3">{m.note || '—'}</span>
@@ -337,7 +350,7 @@ export default function MovementsPage() {
           </Button>
         </> : undefined}
       >
-        <div className="grid grid-cols-5 gap-2 mb-5">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-5">
           {TYPES.map(t => (
             <button key={t.id} type="button" onClick={() => setMoveType(t.id)}
               className={`p-3 rounded-lg border text-center transition-all font-sans text-xs font-medium ${
@@ -347,7 +360,7 @@ export default function MovementsPage() {
               }`}>
               <span className="text-xl block mb-1">{t.icon}</span>
               {t.label}
-              <span className="block text-[10px] mt-0.5 opacity-60">{t.desc}</span>
+              <span className="block text-[10px] mt-0.5 opacity-60 hidden sm:block">{t.desc}</span>
             </button>
           ))}
         </div>
@@ -407,7 +420,7 @@ export default function MovementsPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-text-2">Data operațiunii</label>
                 <input type="date" {...register('date')}
