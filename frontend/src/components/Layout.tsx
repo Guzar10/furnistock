@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
+import { usePageTitle } from '../hooks/usePageTitle'
+import { useSocket } from '../hooks/useSocket'
 import Modal from './ui/Modal'
 import Button from './ui/Button'
+import NotificationBell from './NotificationBell'
 import api from '../api/client'
-import { usePageTitle } from '../hooks/usePageTitle'
-
 
 const nav = [
   { to: '/dashboard',  label: 'Dashboard',      icon: '▦' },
@@ -21,17 +22,18 @@ export default function Layout() {
   const { theme, toggleTheme } = useThemeStore()
   const navigate               = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  usePageTitle()
 
+  usePageTitle()
+  useSocket()
 
   // Schimbare parolă
-  const [pwOpen,       setPwOpen]       = useState(false)
-  const [currentPw,    setCurrentPw]    = useState('')
-  const [newPw,        setNewPw]        = useState('')
-  const [confirmPw,    setConfirmPw]    = useState('')
-  const [pwError,      setPwError]      = useState('')
-  const [pwSuccess,    setPwSuccess]    = useState(false)
-  const [pwLoading,    setPwLoading]    = useState(false)
+  const [pwOpen,    setPwOpen]    = useState(false)
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw,     setNewPw]     = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [pwError,   setPwError]   = useState('')
+  const [pwSuccess, setPwSuccess] = useState(false)
+  const [pwLoading, setPwLoading] = useState(false)
 
   const handleLogout = async () => { await clearAuth(); navigate('/login') }
   const closeSidebar = () => setSidebarOpen(false)
@@ -135,12 +137,15 @@ export default function Layout() {
         <div className="text-[11px] text-text-3 mb-3 truncate">{user?.email}</div>
         <div className="flex items-center justify-between mb-2">
           <RoleBadge role={user?.role} />
-          <button
-            onClick={toggleTheme}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-bg-surface2 border border-border hover:border-border-2 transition-all text-text-2 hover:text-text text-xs"
-          >
-            {theme === 'dark' ? '☀ Light' : '☾ Dark'}
-          </button>
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-bg-surface2 border border-border hover:border-border-2 transition-all text-text-2 hover:text-text text-xs"
+            >
+              {theme === 'dark' ? '☀ Light' : '☾ Dark'}
+            </button>
+          </div>
         </div>
         <button
           onClick={openPwModal}
@@ -179,6 +184,7 @@ export default function Layout() {
 
       {/* Main */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+
         {/* Topbar mobile */}
         <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-border bg-bg-surface flex-shrink-0">
           <button
@@ -190,12 +196,15 @@ export default function Layout() {
           <span className="font-serif text-lg font-semibold text-text">
             Furni<span className="text-accent">Stock</span>
           </span>
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-md text-text-2 hover:text-text hover:bg-bg-surface2 transition-colors text-sm"
-          >
-            {theme === 'dark' ? '☀' : '☾'}
-          </button>
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-md text-text-2 hover:text-text hover:bg-bg-surface2 transition-colors text-sm"
+            >
+              {theme === 'dark' ? '☀' : '☾'}
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-bg">
@@ -274,10 +283,10 @@ export default function Layout() {
                 </div>
                 <div className="flex flex-col gap-0.5">
                   {[
-                    [newPw.length >= 8,        'Minim 8 caractere'],
-                    [/[A-Z]/.test(newPw),      'Cel puțin o literă mare'],
-                    [/[0-9]/.test(newPw),      'Cel puțin o cifră'],
-                    [/[^A-Za-z0-9]/.test(newPw), 'Caracter special (bonus)'],
+                    [newPw.length >= 8,           'Minim 8 caractere'],
+                    [/[A-Z]/.test(newPw),         'Cel puțin o literă mare'],
+                    [/[0-9]/.test(newPw),         'Cel puțin o cifră'],
+                    [/[^A-Za-z0-9]/.test(newPw),  'Caracter special (bonus)'],
                   ].map(([ok, label]: any) => (
                     <span key={label} className={`text-[11px] ${ok ? 'text-success' : 'text-text-3'}`}>
                       {ok ? '✓' : '○'} {label}

@@ -1,6 +1,7 @@
 import { Router, Response } from 'express'
 import { z } from 'zod'
 import { prisma } from '../lib/prisma'
+import { sendNotification } from '../lib/socket'
 import { authGuard, AuthRequest } from '../middleware/auth'
 
 const router = Router()
@@ -113,7 +114,6 @@ router.post('/', async (req: AuthRequest, res: Response) => {
           ...data.produced.map(l => ({ ...l })),
         ]
       } else if (data.type === 'INVENTARIERE') {
-        // Procesează inventarierea
         const invLines = []
         for (const line of data.lines) {
           const stocCurent = await tx.stock.findUnique({
@@ -128,7 +128,6 @@ router.post('/', async (req: AuthRequest, res: Response) => {
           const cantActuala = line.quantityActuala
           const diferenta   = cantActuala - cantCurenta
 
-          // Setează cantitatea exactă
           await tx.stock.upsert({
             where: {
               productId_warehouseId: {
@@ -158,9 +157,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
             date:   data.date ? new Date(data.date) : new Date(),
             note:   data.note,
             userId,
-            lines: {
-              create: invLines,
-            },
+            lines:  { create: invLines },
           },
           include: {
             lines: true,
@@ -172,7 +169,6 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       }
 
       if (data.type !== 'INVENTARIERE') {
-        // Verifică și ajustează stocuri pentru celelalte tipuri
         for (const line of lines) {
           const isOut =
             data.type === 'VANZARE'   ||
@@ -245,6 +241,58 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         })
       }
     })
+
+    // ── Notificări ──
+    const userRecord = await prisma.user.findUnique({
+      where:  { id: userId },
+      select: { name: true },
+    })
+    const userName = userRecord?.name || 'Cineva'
+
+    if (data.type === 'TRANSFER') {
+      const transferLines = (data as any).lines || []
+      for (const line of transferLines) {
+        const product = await prisma.product.findUnique({ where: { id: line.productId },       select: { name: true } })
+        const fromWh  = await prisma.warehouse.findUnique({ where: { id: line.fromWarehouseId }, select: { name: true } })
+        const toWh    = await prisma.warehouse.findUnique({ where: { id: line.toWarehouseId },   select: { name: true } })
+        sendNotification('admins_managers', {
+          type:    'transfer',
+          title:   '🔄 Transfer de stoc',
+          message: `${userName} a transferat ${line.quantity} ${product?.name || ''} din ${fromWh?.name || '?'} spre ${toWh?.name || '?'}`,
+          data:    { movementId: movement?.id },
+        })
+      }
+    } else {
+      sendNotification('admins_managers', {
+        type:    'movement',
+        title:   `📦 Mișcare nouă — ${data.type}`,
+        message: `${userName} a înregistrat o mișcare de tip ${data.type.toLowerCase()}`,
+        data:    { movementId: movement?.id },
+      })
+    }
+
+    // ── Verifică stoc scăzut ──
+    const allLines = data.type === 'PRODUCTIE'
+      ? [...(data as any).consumed, ...(data as any).produced]
+      : (data as any).lines || []
+
+    for (const line of allLines) {
+      const product = await prisma.product.findUnique({
+        where:   { id: line.productId },
+        include: { stock: true },
+      })
+      if (!product || product.minStock <= 0) continue
+
+      const totalStock = product.stock.reduce((s, st) => s + st.quantity, 0)
+      if (totalStock < product.minStock) {
+        sendNotification('all', {
+          type:    'low_stock',
+          title:   '⚠️ Stoc scăzut',
+          message: `${product.name} a scăzut sub minimul de ${product.minStock} ${product.unit.toLowerCase()} (curent: ${totalStock})`,
+          data:    { productId: product.id },
+        })
+      }
+    }
 
     res.status(201).json(movement)
   } catch (err: any) {
