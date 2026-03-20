@@ -13,13 +13,14 @@ export type User = {
 }
 
 export type Product = {
-  id: string
-  name: string
-  type: ProductType
-  unit: Unit
+  id:          string
+  name:        string
+  type:        ProductType
+  unit:        Unit
   description?: string
-  active: boolean
-  stock?: StockEntry[]
+  minStock:    number
+  active:      boolean
+  stock?:      StockEntry[]
 }
 
 export type Warehouse = {

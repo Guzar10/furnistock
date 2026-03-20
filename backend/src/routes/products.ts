@@ -7,27 +7,24 @@ const router = Router()
 router.use(authGuard)
 
 const ProductSchema = z.object({
-  name: z.string().min(1),
-  type: z.enum(['MATERIE_PRIMA', 'GATA_ASAMBLARE', 'ASAMBLAT']),
-  unit: z.enum(['BUC', 'MP', 'ML', 'KG', 'M3', 'L']).default('BUC'),
+  name:        z.string().min(1),
+  type:        z.enum(['MATERIE_PRIMA', 'GATA_ASAMBLARE', 'ASAMBLAT']),
+  unit:        z.enum(['BUC', 'MP', 'ML', 'KG', 'M3', 'L']).default('BUC'),
   description: z.string().optional(),
+  minStock:    z.number().min(0).default(0),
 })
 
-// GET /products
 router.get('/', async (_req, res: Response) => {
   const products = await prisma.product.findMany({
     where: { active: true },
     include: {
-      stock: {
-        include: { warehouse: true },
-      },
+      stock: { include: { warehouse: true } },
     },
     orderBy: { name: 'asc' },
   })
   res.json(products)
 })
 
-// GET /products/:id
 router.get('/:id', async (req, res: Response) => {
   const product = await prisma.product.findUnique({
     where: { id: req.params.id },
@@ -37,7 +34,6 @@ router.get('/:id', async (req, res: Response) => {
   res.json(product)
 })
 
-// POST /products — doar ADMIN și MANAGER
 router.post('/', roleGuard('ADMIN', 'MANAGER'), async (req: AuthRequest, res: Response) => {
   const parsed = ProductSchema.safeParse(req.body)
   if (!parsed.success) { res.status(400).json({ error: parsed.error.flatten() }); return }
@@ -45,22 +41,20 @@ router.post('/', roleGuard('ADMIN', 'MANAGER'), async (req: AuthRequest, res: Re
   res.status(201).json(product)
 })
 
-// PUT /products/:id
 router.put('/:id', roleGuard('ADMIN', 'MANAGER'), async (req: AuthRequest, res: Response) => {
   const parsed = ProductSchema.safeParse(req.body)
   if (!parsed.success) { res.status(400).json({ error: parsed.error.flatten() }); return }
   const product = await prisma.product.update({
     where: { id: req.params.id },
-    data: parsed.data,
+    data:  parsed.data,
   })
   res.json(product)
 })
 
-// DELETE /products/:id — soft delete, doar ADMIN
 router.delete('/:id', roleGuard('ADMIN'), async (req, res: Response) => {
   await prisma.product.update({
     where: { id: req.params.id },
-    data: { active: false },
+    data:  { active: false },
   })
   res.json({ success: true })
 })

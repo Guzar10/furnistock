@@ -11,80 +11,114 @@ import { getProducts, createProduct, updateProduct, deleteProduct } from '../api
 import { useAuthStore } from '../store/authStore'
 import type { Product } from '../types'
 
-type FormData = { name: string; type: Product['type']; unit: Product['unit']; description: string }
+type FormData = {
+  name:        string
+  type:        Product['type']
+  unit:        Product['unit']
+  description: string
+  minStock:    number
+}
 
 export default function ProductsPage() {
-  const qc = useQueryClient()
-  const user = useAuthStore(s => s.user)
+  const qc      = useQueryClient()
+  const user    = useAuthStore(s => s.user)
   const canEdit = user?.role === 'ADMIN' || user?.role === 'MANAGER'
 
   const { data: products = [], isLoading } = useQuery({ queryKey: ['products'], queryFn: getProducts })
-  const [open, setOpen]             = useState(false)
-  const [editing, setEditing]       = useState<Product | null>(null)
-  const [search, setSearch]         = useState('')
+
+  const [open,       setOpen]       = useState(false)
+  const [editing,    setEditing]    = useState<Product | null>(null)
+  const [search,     setSearch]     = useState('')
   const [typeFilter, setTypeFilter] = useState('')
+  const [alertOnly,  setAlertOnly]  = useState(false)
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>()
 
   const saveMutation = useMutation({
     mutationFn: (data: FormData) =>
-      editing ? updateProduct(editing.id, data) : createProduct(data),
+      editing
+        ? updateProduct(editing.id, { ...data, minStock: Number(data.minStock) })
+        : createProduct({ ...data, minStock: Number(data.minStock) }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['products'] }); closeModal() },
   })
 
   const deleteMutation = useMutation({
     mutationFn: deleteProduct,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+    onSuccess:  () => qc.invalidateQueries({ queryKey: ['products'] }),
   })
 
   const openNew = () => {
     setEditing(null)
-    reset({ name: '', type: 'MATERIE_PRIMA', unit: 'BUC', description: '' })
+    reset({ name: '', type: 'MATERIE_PRIMA', unit: 'BUC', description: '', minStock: 0 })
     setOpen(true)
   }
   const openEdit = (p: Product) => {
     setEditing(p)
-    reset({ name: p.name, type: p.type, unit: p.unit, description: p.description || '' })
+    reset({ name: p.name, type: p.type, unit: p.unit, description: p.description || '', minStock: p.minStock || 0 })
     setOpen(true)
   }
   const closeModal = () => { setOpen(false); setEditing(null) }
 
+  const getTotal    = (p: Product) => (p.stock || []).reduce((s, st) => s + st.quantity, 0)
+  const isLow       = (p: Product) => p.minStock > 0 && getTotal(p) < p.minStock
+  const isCritical  = (p: Product) => p.minStock > 0 && getTotal(p) === 0
+
   const filtered = products.filter(p => {
-    const ms = !search || p.name.toLowerCase().includes(search.toLowerCase())
+    const ms = !search     || p.name.toLowerCase().includes(search.toLowerCase())
     const mt = !typeFilter || p.type === typeFilter
-    return ms && mt
+    const ma = !alertOnly  || isLow(p)
+    return ms && mt && ma
   })
+
+  const lowCount = products.filter(isLow).length
 
   const columns = [
     {
       key: 'name', header: 'Denumire',
       render: (p: Product) => (
-        <div>
-          <div className="font-medium text-text">{p.name}</div>
-          {p.description && <div className="text-xs text-text-3 mt-0.5">{p.description}</div>}
+        <div className="flex items-start gap-2">
+          {isLow(p) && (
+            <span title="Stoc sub minim" className="mt-0.5 shrink-0 text-xs">
+              {isCritical(p) ? '🔴' : '🟡'}
+            </span>
+          )}
+          <div>
+            <div className="font-medium text-text">{p.name}</div>
+            {p.description && <div className="text-xs text-text-3 mt-0.5">{p.description}</div>}
+          </div>
         </div>
       ),
     },
-    {
-      key: 'type', header: 'Tip',
-      render: (p: Product) => productTypeBadge(p.type),
-    },
-    {
-      key: 'unit', header: 'U.M.',
-      render: (p: Product) => <span className="text-text-2">{unitLabel(p.unit)}</span>,
-    },
+    { key: 'type', header: 'Tip', render: (p: Product) => productTypeBadge(p.type) },
+    { key: 'unit', header: 'U.M.', render: (p: Product) => <span className="text-text-2">{unitLabel(p.unit)}</span> },
     {
       key: 'stock', header: 'Stoc Total',
       render: (p: Product) => {
-        const total = (p.stock || []).reduce((s, st) => s + st.quantity, 0)
+        const total = getTotal(p)
         return (
           <span className={`font-mono text-base font-medium ${
-            total === 0 ? 'text-text-3' : total < 15 ? 'text-danger' : 'text-success'
+            isCritical(p) ? 'text-danger' :
+            isLow(p)      ? 'text-accent'  : 'text-success'
           }`}>
             {total}
           </span>
         )
       },
+    },
+    {
+      key: 'minStock', header: 'Stoc Minim',
+      render: (p: Product) => (
+        <div className="flex items-center gap-1.5">
+          <span className={`font-mono text-sm ${p.minStock > 0 ? 'text-text-2' : 'text-text-3'}`}>
+            {p.minStock > 0 ? p.minStock : '—'}
+          </span>
+          {isLow(p) && p.minStock > 0 && (
+            <span className="text-[10px] bg-danger/10 text-danger px-1.5 py-0.5 rounded-full font-medium">
+              sub minim
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       key: 'locations', header: 'Locații',
@@ -115,33 +149,49 @@ export default function ProductsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-serif text-3xl font-light">Catalog Produse</h1>
+          <h1 className="font-serif text-2xl md:text-3xl font-light">Catalog Produse</h1>
           <p className="text-sm text-text-3 mt-1">{products.length} produse înregistrate</p>
         </div>
-        {canEdit && (
-          <Button variant="primary" onClick={openNew}>+ Produs Nou</Button>
-        )}
+        {canEdit && <Button variant="primary" onClick={openNew}>+ Produs Nou</Button>}
       </div>
 
+      {/* Alert banner */}
+      {lowCount > 0 && (
+        <div className="flex items-center justify-between bg-danger/5 border border-danger/15 rounded-xl px-4 py-3 mb-4 gap-3">
+          <p className="text-sm text-text-2">
+            ⚠️ <strong className="text-danger">{lowCount} {lowCount > 1 ? 'produse au' : 'produs are'}</strong> stocul sub minimul configurat
+          </p>
+          <button
+            onClick={() => setAlertOnly(!alertOnly)}
+            className={`text-xs px-3 py-1.5 rounded-md transition-colors whitespace-nowrap ${
+              alertOnly
+                ? 'bg-danger/20 text-danger font-medium'
+                : 'bg-danger/10 text-danger hover:bg-danger/20'
+            }`}
+          >
+            {alertOnly ? '✕ Anulează filtru' : 'Arată doar alertele'}
+          </button>
+        </div>
+      )}
+
+      {/* Filtre */}
       <div className="flex gap-2 mb-4 flex-wrap">
         <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+          value={search} onChange={e => setSearch(e.target.value)}
           placeholder="🔍  Caută produs..."
-          className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text placeholder:text-text-3 outline-none focus:border-accent w-56"
+          className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text placeholder:text-text-3 outline-none focus:border-accent w-full sm:w-56"
         />
-        <select
-          value={typeFilter}
-          onChange={e => setTypeFilter(e.target.value)}
-          className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent cursor-pointer"
-        >
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+          className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent cursor-pointer">
           <option value="">Toate tipurile</option>
           <option value="MATERIE_PRIMA">🪵 Materie Primă</option>
           <option value="GATA_ASAMBLARE">📦 Kit Asamblare</option>
           <option value="ASAMBLAT">🛋️ Asamblat</option>
         </select>
-        {(search || typeFilter) && (
-          <Button size="sm" onClick={() => { setSearch(''); setTypeFilter('') }}>✕ Resetează</Button>
+        {(search || typeFilter || alertOnly) && (
+          <Button size="sm" onClick={() => { setSearch(''); setTypeFilter(''); setAlertOnly(false) }}>
+            ✕ Resetează
+          </Button>
         )}
       </div>
 
@@ -154,16 +204,11 @@ export default function ProductsPage() {
 
       {canEdit && (
         <Modal
-          open={open}
-          onClose={closeModal}
+          open={open} onClose={closeModal}
           title={editing ? 'Editează Produs' : 'Produs Nou'}
           footer={<>
             <Button variant="ghost" onClick={closeModal}>Anulează</Button>
-            <Button
-              variant="primary"
-              onClick={handleSubmit(d => saveMutation.mutate(d))}
-              disabled={saveMutation.isPending}
-            >
+            <Button variant="primary" onClick={handleSubmit(d => saveMutation.mutate(d))} disabled={saveMutation.isPending}>
               {saveMutation.isPending ? 'Se salvează...' : '✓ Salvează'}
             </Button>
           </>}
@@ -195,6 +240,21 @@ export default function ProductsPage() {
               {...register('description')}
               placeholder="Scurtă descriere..."
             />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-text-2">
+                Stoc minim alertă
+                <span className="text-text-3 font-normal ml-1">(0 = dezactivat)</span>
+              </label>
+              <input
+                type="number" min="0" step="any"
+                {...register('minStock')}
+                placeholder="ex: 10"
+                className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent"
+              />
+              <p className="text-[11px] text-text-3">
+                Vei primi alertă când stocul total scade sub această valoare
+              </p>
+            </div>
           </div>
         </Modal>
       )}

@@ -49,15 +49,16 @@ model User {
 }
 
 model Product {
-  id          String        @id @default(cuid())
-  name        String
-  type        ProductType
-  unit        Unit          @default(BUC)
-  description String?
-  active      Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  stock       Stock[]
+  id            String        @id @default(cuid())
+  name          String
+  type          ProductType
+  unit          Unit          @default(BUC)
+  description   String?
+  minStock      Float         @default(0)
+  active        Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  stock         Stock[]
   movementLines MovementLine[]
 }
 

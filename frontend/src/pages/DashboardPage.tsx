@@ -14,9 +14,10 @@ export default function DashboardPage() {
 
   const activeProducts = products.filter(p => (p.stock || []).some(s => s.quantity > 0)).length
   const lowStock = products.filter(p => {
-    const total = (p.stock || []).reduce((s, st) => s + st.quantity, 0)
-    return total > 0 && total < 15
-  })
+  const total = (p.stock || []).reduce((s, st) => s + st.quantity, 0)
+  if (p.minStock > 0) return total < p.minStock
+  return false
+})
 
   return (
     <div>
