@@ -52,21 +52,28 @@ const MovementSchema = z.discriminatedUnion('type', [
 
 // GET /movements
 router.get('/', async (req, res: Response) => {
-  const { type, limit = '50' } = req.query
+  const { type, limit = '100', dateFrom, dateTo } = req.query
+
   try {
     const movements = await prisma.movement.findMany({
-      where: { ...(type ? { type: String(type) as any } : {}) },
+      where: {
+        ...(type ? { type: String(type) as any } : {}),
+        ...(dateFrom || dateTo ? {
+          date: {
+            ...(dateFrom ? { gte: new Date(String(dateFrom)) } : {}),
+            ...(dateTo   ? { lte: new Date(new Date(String(dateTo)).setHours(23, 59, 59, 999)) } : {}),
+          }
+        } : {}),
+      },
       include: {
         user:  { select: { id: true, name: true } },
         lines: {
           include: {
-            product: {
-              select: { id: true, name: true, unit: true }
-            }
+            product: { select: { id: true, name: true, unit: true } }
           }
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { date: 'desc' },
       take: parseInt(String(limit)),
     })
     res.json(movements)

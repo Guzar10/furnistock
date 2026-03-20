@@ -1,7 +1,12 @@
 import api from './client'
 import type { Movement } from '../types'
 
-export const getMovements = async (params?: { type?: string; limit?: number }) => {
+export const getMovements = async (params?: {
+  type?: string
+  limit?: number
+  dateFrom?: string
+  dateTo?: string
+}) => {
   const { data } = await api.get('/movements', { params })
   return data as Movement[]
 }
