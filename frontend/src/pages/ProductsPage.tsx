@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router-dom'
 import Table from '../components/ui/Table'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
@@ -8,10 +9,10 @@ import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import { productTypeBadge, unitLabel } from '../components/ui/Badge'
 import { getProducts, createProduct, updateProduct, deleteProduct } from '../api/products'
-import { useAuthStore } from '../store/authStore'
-import type { Product } from '../types'
 import { exportProductsExcel } from '../lib/exportExcel'
 import { exportProductsPdf } from '../lib/exportPdf'
+import { useAuthStore } from '../store/authStore'
+import type { Product } from '../types'
 
 type FormData = {
   name:        string
@@ -22,9 +23,10 @@ type FormData = {
 }
 
 export default function ProductsPage() {
-  const qc      = useQueryClient()
-  const user    = useAuthStore(s => s.user)
-  const canEdit = user?.role === 'ADMIN' || user?.role === 'MANAGER'
+  const qc       = useQueryClient()
+  const user     = useAuthStore(s => s.user)
+  const navigate = useNavigate()
+  const canEdit  = user?.role === 'ADMIN' || user?.role === 'MANAGER'
 
   const { data: products = [], isLoading } = useQuery({ queryKey: ['products'], queryFn: getProducts })
 
@@ -61,9 +63,9 @@ export default function ProductsPage() {
   }
   const closeModal = () => { setOpen(false); setEditing(null) }
 
-  const getTotal    = (p: Product) => (p.stock || []).reduce((s, st) => s + st.quantity, 0)
-  const isLow       = (p: Product) => p.minStock > 0 && getTotal(p) < p.minStock
-  const isCritical  = (p: Product) => p.minStock > 0 && getTotal(p) === 0
+  const getTotal   = (p: Product) => (p.stock || []).reduce((s, st) => s + st.quantity, 0)
+  const isLow      = (p: Product) => p.minStock > 0 && getTotal(p) < p.minStock
+  const isCritical = (p: Product) => p.minStock > 0 && getTotal(p) === 0
 
   const filtered = products.filter(p => {
     const ms = !search     || p.name.toLowerCase().includes(search.toLowerCase())
@@ -91,8 +93,14 @@ export default function ProductsPage() {
         </div>
       ),
     },
-    { key: 'type', header: 'Tip', render: (p: Product) => productTypeBadge(p.type) },
-    { key: 'unit', header: 'U.M.', render: (p: Product) => <span className="text-text-2">{unitLabel(p.unit)}</span> },
+    {
+      key: 'type', header: 'Tip',
+      render: (p: Product) => productTypeBadge(p.type),
+    },
+    {
+      key: 'unit', header: 'U.M.',
+      render: (p: Product) => <span className="text-text-2">{unitLabel(p.unit)}</span>,
+    },
     {
       key: 'stock', header: 'Stoc Total',
       render: (p: Product) => {
@@ -135,35 +143,44 @@ export default function ProductsPage() {
       ),
     },
     {
-      key: 'actions', header: '', width: '80px',
-      render: (p: Product) => canEdit ? (
+      key: 'actions', header: '', width: '110px',
+      render: (p: Product) => (
         <div className="flex gap-1.5">
-          <Button size="sm" onClick={() => openEdit(p)}>✎</Button>
-          <Button size="sm" variant="danger" onClick={() => {
-            if (confirm(`Ștergi "${p.name}"?`)) deleteMutation.mutate(p.id)
-          }}>✕</Button>
+          <Button
+            size="sm" variant="ghost"
+            onClick={() => navigate(`/products/${p.id}/history`)}
+            title="Istoric mișcări"
+          >
+            📋
+          </Button>
+          {canEdit && <>
+            <Button size="sm" onClick={() => openEdit(p)}>✎</Button>
+            <Button size="sm" variant="danger" onClick={() => {
+              if (confirm(`Ștergi "${p.name}"?`)) deleteMutation.mutate(p.id)
+            }}>✕</Button>
+          </>}
         </div>
-      ) : null,
+      ),
     },
   ]
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-  <div>
-    <h1 className="font-serif text-2xl md:text-3xl font-light">Catalog Produse</h1>
-    <p className="text-sm text-text-3 mt-1">{products.length} produse înregistrate</p>
-  </div>
-  <div className="flex gap-2">
-    <Button variant="ghost" size="sm" onClick={() => exportProductsExcel(filtered)} disabled={filtered.length === 0}>
-      ⬇ Excel
-    </Button>
-    <Button variant="ghost" size="sm" onClick={() => exportProductsPdf(filtered)} disabled={filtered.length === 0}>
-      ⬇ PDF
-    </Button>
-    {canEdit && <Button variant="primary" onClick={openNew}>+ Produs Nou</Button>}
-  </div>
-</div>
+        <div>
+          <h1 className="font-serif text-2xl md:text-3xl font-light">Catalog Produse</h1>
+          <p className="text-sm text-text-3 mt-1">{products.length} produse înregistrate</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={() => exportProductsExcel(filtered)} disabled={filtered.length === 0}>
+            ⬇ Excel
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => exportProductsPdf(filtered)} disabled={filtered.length === 0}>
+            ⬇ PDF
+          </Button>
+          {canEdit && <Button variant="primary" onClick={openNew}>+ Produs Nou</Button>}
+        </div>
+      </div>
 
       {/* Alert banner */}
       {lowCount > 0 && (
@@ -218,7 +235,11 @@ export default function ProductsPage() {
           title={editing ? 'Editează Produs' : 'Produs Nou'}
           footer={<>
             <Button variant="ghost" onClick={closeModal}>Anulează</Button>
-            <Button variant="primary" onClick={handleSubmit(d => saveMutation.mutate(d))} disabled={saveMutation.isPending}>
+            <Button
+              variant="primary"
+              onClick={handleSubmit(d => saveMutation.mutate(d))}
+              disabled={saveMutation.isPending}
+            >
               {saveMutation.isPending ? 'Se salvează...' : '✓ Salvează'}
             </Button>
           </>}

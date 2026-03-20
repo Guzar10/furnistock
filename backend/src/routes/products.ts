@@ -59,4 +59,24 @@ router.delete('/:id', roleGuard('ADMIN'), async (req, res: Response) => {
   res.json({ success: true })
 })
 
+// GET /products/:id/history — toate mișcările unui produs
+router.get('/:id/history', async (req, res: Response) => {
+  const { id } = req.params
+
+  const lines = await prisma.movementLine.findMany({
+    where: { productId: id },
+    include: {
+      movement: {
+        include: {
+          user: { select: { id: true, name: true } },
+        },
+      },
+    },
+    orderBy: { movement: { date: 'desc' } },
+    take: 100,
+  })
+
+  res.json(lines)
+})
+
 export default router

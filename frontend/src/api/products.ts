@@ -19,3 +19,8 @@ export const updateProduct = async (id: string, body: Partial<Product>) => {
 export const deleteProduct = async (id: string) => {
   await api.delete(`/products/${id}`)
 }
+
+export const getProductHistory = async (id: string) => {
+  const { data } = await api.get(`/products/${id}/history`)
+  return data
+}

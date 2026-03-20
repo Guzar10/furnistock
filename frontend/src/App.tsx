@@ -8,6 +8,7 @@ import WarehousesPage from './pages/WarehousesPage'
 import StockPage from './pages/StockPage'
 import MovementsPage from './pages/MovementsPage'
 import UsersPage from './pages/UsersPage'
+import ProductHistoryPage from './pages/ProductHistoryPage'
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const user = useAuthStore(s => s.user)
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="stock"      element={<StockPage />} />
           <Route path="movements"  element={<MovementsPage />} />
           <Route path="users"      element={<UsersPage />} />
+          <Route path="products/:id/history" element={<ProductHistoryPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
