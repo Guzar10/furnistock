@@ -8,6 +8,7 @@ import { getStock } from '../api/stock'
 import { getWarehouses } from '../api/warehouses'
 import { exportStockExcel } from '../lib/exportExcel'
 import { exportStockPdf } from '../lib/exportPdf'
+import { PRODUCT_TYPE_ICONS } from '../lib/icons'
 import type { StockEntry } from '../types'
 
 export default function StockPage() {
@@ -15,11 +16,7 @@ export default function StockPage() {
   const [search,      setSearch]     = useState('')
   const [typeFilter,  setTypeFilter] = useState('')
   const [whFilter,    setWhFilter]   = useState(searchParams.get('warehouseId') || '')
-  const [page, setPage] = useState(1)
-
-  const handleSearch     = (v: string) => { setSearch(v);     setPage(1) }
-  const handleWhFilter   = (v: string) => { setWhFilter(v);   setPage(1) }
-  const handleTypeFilter = (v: string) => { setTypeFilter(v); setPage(1) }
+  const [page,        setPage]       = useState(1)
 
   const { data: stock      = [], isLoading } = useQuery({
     queryKey: ['stock', whFilter, typeFilter],
@@ -30,6 +27,10 @@ export default function StockPage() {
   const filtered = stock.filter(s =>
     !search || s.product.name.toLowerCase().includes(search.toLowerCase())
   )
+
+  const handleSearch     = (v: string) => { setSearch(v);     setPage(1) }
+  const handleWhFilter   = (v: string) => { setWhFilter(v);   setPage(1) }
+  const handleTypeFilter = (v: string) => { setTypeFilter(v); setPage(1) }
 
   const columns = [
     {
@@ -54,9 +55,7 @@ export default function StockPage() {
     {
       key: 'quantity', header: 'Cantitate',
       render: (s: StockEntry) => (
-        <span className={`font-mono text-lg font-medium ${
-          s.quantity < 5 ? 'text-danger' : s.quantity < 15 ? 'text-accent' : 'text-success'
-        }`}>
+        <span className={`font-mono text-lg font-medium ${s.quantity < 5 ? 'text-danger' : s.quantity < 15 ? 'text-accent' : 'text-success'}`}>
           {s.quantity}
         </span>
       ),
@@ -77,22 +76,14 @@ export default function StockPage() {
             {filtered.length} înregistrări{whFilter ? ` în ${warehouses.find(w => w.id === whFilter)?.name}` : ' totale'}
           </p>
         </div>
-        {/* Export buttons */}
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={() => exportStockExcel(filtered)}
-            disabled={filtered.length === 0}>
-            ⬇ Excel
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => exportStockPdf(filtered)}
-            disabled={filtered.length === 0}>
-            ⬇ PDF
-          </Button>
+          <Button variant="ghost" size="sm" onClick={() => exportStockExcel(filtered)} disabled={filtered.length === 0}>⬇ Excel</Button>
+          <Button variant="ghost" size="sm" onClick={() => exportStockPdf(filtered)} disabled={filtered.length === 0}>⬇ PDF</Button>
         </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
-        <input
-          value={search} onChange={e => handleSearch(e.target.value)}
+        <input value={search} onChange={e => handleSearch(e.target.value)}
           placeholder="🔍  Caută produs..."
           className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text placeholder:text-text-3 outline-none focus:border-accent w-full sm:w-56"
         />
@@ -105,9 +96,9 @@ export default function StockPage() {
           <select value={typeFilter} onChange={e => handleTypeFilter(e.target.value)}
             className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent cursor-pointer flex-1 min-w-0">
             <option value="">Toate tipurile</option>
-            <option value="MATERIE_PRIMA">🪵 Mat. Primă</option>
-            <option value="GATA_ASAMBLARE">📦 Kit</option>
-            <option value="ASAMBLAT">🛋️ Asamblat</option>
+            <option value="MATERIE_PRIMA">{PRODUCT_TYPE_ICONS['MATERIE_PRIMA']} Mat. Primă</option>
+            <option value="GATA_ASAMBLARE">{PRODUCT_TYPE_ICONS['GATA_ASAMBLARE']} Kit</option>
+            <option value="ASAMBLAT">{PRODUCT_TYPE_ICONS['ASAMBLAT']} Asamblat</option>
           </select>
           {(search || whFilter || typeFilter) && (
             <Button size="sm" onClick={() => { handleSearch(''); handleWhFilter(''); handleTypeFilter('') }}>✕</Button>
@@ -118,15 +109,7 @@ export default function StockPage() {
       <div className="bg-bg-surface border border-border rounded-xl">
         {isLoading
           ? <div className="p-10 text-center text-text-3">Se încarcă...</div>
-          : <Table
-              columns={columns}
-              data={filtered}
-              keyFn={s => s.id}
-              empty="Niciun stoc găsit"
-              page={page}
-              perPage={25}
-              onPageChange={setPage}
-            />
+          : <Table columns={columns} data={filtered} keyFn={s => s.id} empty="Niciun stoc găsit" page={page} perPage={25} onPageChange={setPage} />
         }
       </div>
     </div>

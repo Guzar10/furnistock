@@ -4,24 +4,33 @@ import { useForm, useFieldArray } from 'react-hook-form'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import { movementTypeBadge, unitLabel } from '../components/ui/Badge'
-import { useToast } from '../components/ui/Toast'
-import Pagination from '../components/ui/Pagination'
 import { getMovements, createMovement, deleteMovement } from '../api/movements'
 import { getProducts } from '../api/products'
 import { getWarehouses } from '../api/warehouses'
 import { useAuthStore } from '../store/authStore'
+import { useToast } from '../components/ui/Toast'
 import { exportMovementsExcel } from '../lib/exportExcel'
 import { exportMovementsPdf } from '../lib/exportPdf'
+import Pagination from '../components/ui/Pagination'
+import {
+  MOVEMENT_TYPE_ICONS,
+  MOVEMENT_TYPE_LABELS,
+} from '../lib/icons'
 import type { Movement } from '../types'
 
-const TYPES = [
-  { id: 'RECEPTIE',     label: 'Recepție',     icon: '📥', desc: 'Marfă cumpărată' },
-  { id: 'PRODUCTIE',    label: 'Producție',    icon: '⚙️', desc: 'Fabricare mobilier' },
-  { id: 'VANZARE',      label: 'Vânzare',      icon: '📤', desc: 'Vânzare client' },
-  { id: 'TRANSFER',     label: 'Transfer',     icon: '🔄', desc: 'Între hale' },
-  { id: 'DESEURI',      label: 'Deșeuri',      icon: '🗑️', desc: 'Casare / deșeuri' },
-  { id: 'INVENTARIERE', label: 'Inventariere', icon: '📋', desc: 'Ajustare stoc' },
-]
+const TYPES = Object.entries(MOVEMENT_TYPE_LABELS).map(([id, label]) => ({
+  id,
+  label,
+  icon: MOVEMENT_TYPE_ICONS[id] || '',
+  desc: {
+    RECEPTIE:     'Marfă cumpărată',
+    PRODUCTIE:    'Fabricare mobilier',
+    VANZARE:      'Vânzare client',
+    TRANSFER:     'Între hale',
+    DESEURI:      'Casare / deșeuri',
+    INVENTARIERE: 'Ajustare stoc',
+  }[id] || '',
+}))
 
 const today     = () => new Date().toISOString().split('T')[0]
 const thisMonth = () => {
@@ -30,18 +39,17 @@ const thisMonth = () => {
 }
 
 export default function MovementsPage() {
-  const qc   = useQueryClient()
-  const user = useAuthStore(s => s.user)
+  const qc          = useQueryClient()
+  const user        = useAuthStore(s => s.user)
+  const { showToast } = useToast()
 
   const [typeFilter,     setTypeFilter]     = useState('')
   const [search,         setSearch]         = useState('')
   const [dateFrom,       setDateFrom]       = useState(thisMonth())
   const [dateTo,         setDateTo]         = useState(today())
   const [activeShortcut, setActiveShortcut] = useState('Luna asta')
-  const [page, setPage] = useState(1)
+  const [page,           setPage]           = useState(1)
   const PER_PAGE = 30
-  const handleSearch     = (v: string) => { setSearch(v);     setPage(1) }
-  const handleTypeFilter = (v: string) => { setTypeFilter(v); setPage(1) }
 
   const { data: movements  = [], isLoading } = useQuery({
     queryKey: ['movements', typeFilter, dateFrom, dateTo],
@@ -58,7 +66,6 @@ export default function MovementsPage() {
 
   const [open,     setOpen]     = useState(false)
   const [moveType, setMoveType] = useState('')
-  const { showToast } = useToast()
 
   const { register, handleSubmit, control, reset } = useForm<any>({
     defaultValues: { lines: [{}], consumed: [{}], produced: [{}] },
@@ -84,7 +91,7 @@ export default function MovementsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: deleteMovement,
-    onSuccess:  () => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['movements'] })
       showToast('Mișcarea a fost ștearsă', 'info')
     },
@@ -117,11 +124,7 @@ export default function MovementsPage() {
       body = {
         ...base,
         lines: (data.lines || [])
-          .map((l: any) => ({
-            productId:       l.productId,
-            toWarehouseId:   l.warehouseId,
-            quantityActuala: parseFloat(l.quantityActuala),
-          }))
+          .map((l: any) => ({ productId: l.productId, toWarehouseId: l.warehouseId, quantityActuala: parseFloat(l.quantityActuala) }))
           .filter((l: any) => l.productId && l.toWarehouseId && !isNaN(l.quantityActuala)),
       }
     }
@@ -153,6 +156,9 @@ export default function MovementsPage() {
     }},
     { label: 'Tot', fn: () => { setDateFrom(''); setDateTo('') } },
   ]
+
+  const handleSearch     = (v: string) => { setSearch(v);     setPage(1) }
+  const handleTypeFilter = (v: string) => { setTypeFilter(v); setPage(1) }
 
   const prodOpts  = products.map(p   => <option key={p.id} value={p.id}>{p.name} ({unitLabel(p.unit)})</option>)
   const whOpts    = warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)
@@ -193,17 +199,13 @@ export default function MovementsPage() {
           <p className="text-sm text-text-3 mt-1">{filtered.length} mișcări în intervalul selectat</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={() => exportMovementsExcel(filtered)} disabled={filtered.length === 0}>
-            ⬇ Excel
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => exportMovementsPdf(filtered, dateFrom, dateTo)} disabled={filtered.length === 0}>
-            ⬇ PDF
-          </Button>
+          <Button variant="ghost" size="sm" onClick={() => exportMovementsExcel(filtered)} disabled={filtered.length === 0}>⬇ Excel</Button>
+          <Button variant="ghost" size="sm" onClick={() => exportMovementsPdf(filtered, dateFrom, dateTo)} disabled={filtered.length === 0}>⬇ PDF</Button>
           <Button variant="primary" onClick={openModal}>+ Mișcare Nouă</Button>
         </div>
       </div>
 
-      {/* Stats rapide */}
+      {/* Stats */}
       <div className="grid grid-cols-6 gap-2 mb-5">
         {stats.map(t => (
           <div key={t.id} className="bg-bg-surface border border-border rounded-xl p-3 text-center">
@@ -220,16 +222,14 @@ export default function MovementsPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
             <div className="flex items-center gap-2 w-full sm:flex-1">
               <span className="text-xs text-text-3 shrink-0 w-10">De la</span>
-              <input
-                type="date" value={dateFrom}
+              <input type="date" value={dateFrom}
                 onChange={e => { setDateFrom(e.target.value); setActiveShortcut('') }}
                 className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent flex-1 min-w-0"
               />
             </div>
             <div className="flex items-center gap-2 w-full sm:flex-1">
               <span className="text-xs text-text-3 shrink-0 w-10">Până la</span>
-              <input
-                type="date" value={dateTo}
+              <input type="date" value={dateTo}
                 onChange={e => { setDateTo(e.target.value); setActiveShortcut('') }}
                 className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent flex-1 min-w-0"
               />
@@ -238,34 +238,30 @@ export default function MovementsPage() {
 
           <div className="flex gap-1.5 flex-wrap">
             {shortcuts.map(s => (
-              <button
-                key={s.label}
-                onClick={() => { s.fn(); setActiveShortcut(s.label) }}
+              <button key={s.label} onClick={() => { s.fn(); setActiveShortcut(s.label) }}
                 className={`text-xs px-2.5 py-1.5 rounded-md border transition-all ${
                   activeShortcut === s.label
                     ? 'bg-accent/10 border-accent/30 text-accent font-medium'
                     : 'bg-bg-surface2 border-border-2 text-text-2 hover:text-accent hover:border-accent/30'
-                }`}
-              >
+                }`}>
                 {s.label}
               </button>
             ))}
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2">
-            <input
-              value={search} onChange={e => setSearch(e.target.value)}
+            <input value={search} onChange={e => handleSearch(e.target.value)}
               placeholder="🔍  Caută în mișcări..."
               className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text placeholder:text-text-3 outline-none focus:border-accent w-full sm:w-56"
             />
             <div className="flex gap-2 flex-1">
-              <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+              <select value={typeFilter} onChange={e => handleTypeFilter(e.target.value)}
                 className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent cursor-pointer flex-1">
                 <option value="">Toate tipurile</option>
                 {TYPES.map(t => <option key={t.id} value={t.id}>{t.icon} {t.label}</option>)}
               </select>
               {(search || typeFilter) && (
-                <Button size="sm" onClick={() => { setSearch(''); setTypeFilter('') }}>✕</Button>
+                <Button size="sm" onClick={() => { handleSearch(''); handleTypeFilter('') }}>✕</Button>
               )}
             </div>
           </div>
@@ -283,7 +279,6 @@ export default function MovementsPage() {
           </div>
         ) : (
           <>
-            {/* Desktop */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full border-collapse text-sm">
                 <thead>
@@ -307,18 +302,14 @@ export default function MovementsPage() {
                             {' '}<span className="text-text">{l.product?.name}</span>
                           </div>
                         ))}
-                        {(m.lines || []).length > 2 && (
-                          <div className="text-xs text-text-3">+{m.lines.length - 2} altele</div>
-                        )}
+                        {(m.lines || []).length > 2 && <div className="text-xs text-text-3">+{m.lines.length - 2} altele</div>}
                       </td>
                       <td className="px-3 py-3 text-xs text-text-2">{m.note || '—'}</td>
                       <td className="px-3 py-3 text-xs text-text-2">{m.user?.name}</td>
                       <td className="px-3 py-3">
                         {user?.role === 'ADMIN' && (
                           <Button size="sm" variant="danger"
-                            onClick={() => { if (confirm('Ștergi această mișcare?')) deleteMutation.mutate(m.id) }}>
-                            ✕
-                          </Button>
+                            onClick={() => { if (confirm('Ștergi această mișcare?')) deleteMutation.mutate(m.id) }}>✕</Button>
                         )}
                       </td>
                     </tr>
@@ -327,15 +318,12 @@ export default function MovementsPage() {
               </table>
             </div>
 
-            {/* Mobile */}
             <div className="md:hidden divide-y divide-border">
               {filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE).map((m: Movement) => (
                 <div key={m.id} className="p-4 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     {movementTypeBadge(m.type)}
-                    <span className="font-mono text-xs text-text-3">
-                      {new Date(m.date).toLocaleDateString('ro-RO')}
-                    </span>
+                    <span className="font-mono text-xs text-text-3">{new Date(m.date).toLocaleDateString('ro-RO')}</span>
                   </div>
                   <div>
                     {(m.lines || []).slice(0, 2).map((l, i) => (
@@ -349,27 +337,19 @@ export default function MovementsPage() {
                     <span className="text-xs text-text-3">{m.note || '—'}</span>
                     {user?.role === 'ADMIN' && (
                       <Button size="sm" variant="danger"
-                        onClick={() => { if (confirm('Ștergi această mișcare?')) deleteMutation.mutate(m.id) }}>
-                        ✕
-                      </Button>
+                        onClick={() => { if (confirm('Ștergi această mișcare?')) deleteMutation.mutate(m.id) }}>✕</Button>
                     )}
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Paginare */}
-            <Pagination
-              total={filtered.length}
-              page={page}
-              perPage={PER_PAGE}
-              onChange={setPage}
-            />
+            <Pagination total={filtered.length} page={page} perPage={PER_PAGE} onChange={setPage} />
           </>
         )}
       </div>
 
-      {/* Modal mișcare */}
+      {/* Modal */}
       <Modal open={open} onClose={closeModal} title="Mișcare de Stoc" wide
         footer={moveType ? <>
           <Button variant="ghost" onClick={closeModal}>Anulează</Button>
@@ -399,69 +379,45 @@ export default function MovementsPage() {
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-widest text-success mb-2">Produse recepționate</div>
                 {linesArr.fields.map((f, i) => <LineRow key={f.id} prefix="lines" idx={i} remove={linesArr.remove} />)}
-                <button type="button" onClick={() => linesArr.append({})}
-                  className="w-full border border-dashed border-border-2 rounded-md py-2 text-xs text-text-3 hover:border-accent hover:text-accent transition-colors">
-                  + Adaugă produs
-                </button>
+                <button type="button" onClick={() => linesArr.append({})} className="w-full border border-dashed border-border-2 rounded-md py-2 text-xs text-text-3 hover:border-accent hover:text-accent transition-colors">+ Adaugă produs</button>
               </div>
             )}
-
             {(moveType === 'VANZARE' || moveType === 'DESEURI') && (
               <div>
                 <div className={`text-[10px] font-semibold uppercase tracking-widest mb-2 ${moveType === 'VANZARE' ? 'text-info' : 'text-danger'}`}>
                   {moveType === 'VANZARE' ? 'Produse vândute' : 'Produse casate'}
                 </div>
                 {linesArr.fields.map((f, i) => <LineRow key={f.id} prefix="lines" idx={i} remove={linesArr.remove} showFrom />)}
-                <button type="button" onClick={() => linesArr.append({})}
-                  className="w-full border border-dashed border-border-2 rounded-md py-2 text-xs text-text-3 hover:border-accent hover:text-accent transition-colors">
-                  + Adaugă produs
-                </button>
+                <button type="button" onClick={() => linesArr.append({})} className="w-full border border-dashed border-border-2 rounded-md py-2 text-xs text-text-3 hover:border-accent hover:text-accent transition-colors">+ Adaugă produs</button>
               </div>
             )}
-
             {moveType === 'TRANSFER' && (
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-widest text-purple mb-2">Transfer între hale</div>
                 {linesArr.fields.map((f, i) => <LineRow key={f.id} prefix="lines" idx={i} remove={linesArr.remove} showFrom showTo />)}
-                <button type="button" onClick={() => linesArr.append({})}
-                  className="w-full border border-dashed border-border-2 rounded-md py-2 text-xs text-text-3 hover:border-accent hover:text-accent transition-colors">
-                  + Adaugă produs
-                </button>
+                <button type="button" onClick={() => linesArr.append({})} className="w-full border border-dashed border-border-2 rounded-md py-2 text-xs text-text-3 hover:border-accent hover:text-accent transition-colors">+ Adaugă produs</button>
               </div>
             )}
-
             {moveType === 'PRODUCTIE' && (
               <div className="flex flex-col gap-4">
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-widest text-danger mb-2">▼ Materiale consumate</div>
                   {consumedArr.fields.map((f, i) => <LineRow key={f.id} prefix="consumed" idx={i} remove={consumedArr.remove} showFrom />)}
-                  <button type="button" onClick={() => consumedArr.append({})}
-                    className="w-full border border-dashed border-border-2 rounded-md py-2 text-xs text-text-3 hover:border-accent hover:text-accent transition-colors">
-                    + Adaugă material
-                  </button>
+                  <button type="button" onClick={() => consumedArr.append({})} className="w-full border border-dashed border-border-2 rounded-md py-2 text-xs text-text-3 hover:border-accent hover:text-accent transition-colors">+ Adaugă material</button>
                 </div>
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-widest text-success mb-2">▲ Produse fabricate</div>
                   {producedArr.fields.map((f, i) => <LineRow key={f.id} prefix="produced" idx={i} remove={producedArr.remove} />)}
-                  <button type="button" onClick={() => producedArr.append({})}
-                    className="w-full border border-dashed border-border-2 rounded-md py-2 text-xs text-text-3 hover:border-accent hover:text-accent transition-colors">
-                    + Adaugă produs finit
-                  </button>
+                  <button type="button" onClick={() => producedArr.append({})} className="w-full border border-dashed border-border-2 rounded-md py-2 text-xs text-text-3 hover:border-accent hover:text-accent transition-colors">+ Adaugă produs finit</button>
                 </div>
               </div>
             )}
-
             {moveType === 'INVENTARIERE' && (
               <div>
                 <div className="bg-info/5 border border-info/20 rounded-lg px-4 py-3 mb-3">
-                  <p className="text-xs text-info">
-                    📋 Introdu cantitatea <strong>reală</strong> găsită la inventar.
-                    Sistemul va calcula și aplica diferența automat.
-                  </p>
+                  <p className="text-xs text-info">📋 Introdu cantitatea <strong>reală</strong> găsită la inventar. Sistemul va calcula și aplica diferența automat.</p>
                 </div>
-                <div className="text-[10px] font-semibold uppercase tracking-widest text-text-3 mb-2">
-                  Cantități reale inventariate
-                </div>
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-text-3 mb-2">Cantități reale inventariate</div>
                 {linesArr.fields.map((f, i) => (
                   <div key={f.id} className="grid gap-2 mb-2" style={{ gridTemplateColumns: '2fr 1fr 80px 28px' }}>
                     <select {...register(`lines.${i}.productId`)} className={lineClass}>
@@ -470,32 +426,25 @@ export default function MovementsPage() {
                     <select {...register(`lines.${i}.warehouseId`)} className={lineClass}>
                       <option value="">— Hală —</option>{whOpts}
                     </select>
-                    <input
-                      type="number" min="0" step="any"
-                      placeholder="Cant. reală"
+                    <input type="number" min="0" step="any" placeholder="Cant. reală"
                       {...register(`lines.${i}.quantityActuala`)}
-                      className={lineClass + ' text-center'}
-                    />
+                      className={lineClass + ' text-center'} />
                     <button type="button" onClick={() => linesArr.remove(i)}
                       className="text-text-3 hover:text-danger transition-colors text-lg leading-none">✕</button>
                   </div>
                 ))}
-                <button type="button" onClick={() => linesArr.append({})}
-                  className="w-full border border-dashed border-border-2 rounded-md py-2 text-xs text-text-3 hover:border-accent hover:text-accent transition-colors">
-                  + Adaugă produs
-                </button>
+                <button type="button" onClick={() => linesArr.append({})} className="w-full border border-dashed border-border-2 rounded-md py-2 text-xs text-text-3 hover:border-accent hover:text-accent transition-colors">+ Adaugă produs</button>
               </div>
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-text-2">Data operațiunii</label>
-                <input type="date" {...register('date')}
-                  className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent" />
+                <input type="date" {...register('date')} className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text outline-none focus:border-accent" />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-text-2">Referință / Notă</label>
-                <input type="text" {...register('note')} placeholder="ex: Inventar lunar..."
+                <input type="text" {...register('note')} placeholder="ex: Factură #1234..."
                   className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2 text-sm text-text placeholder:text-text-3 outline-none focus:border-accent" />
               </div>
             </div>

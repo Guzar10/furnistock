@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import KpiCard from '../components/ui/KpiCard'
 import { getProducts } from '../api/products'
@@ -13,11 +13,12 @@ import { getMovementsByDay, getStockByType, getTopProducts, getMovementsByType }
 import { movementTypeBadge, unitLabel } from '../components/ui/Badge'
 
 const CHART_COLORS = {
-  RECEPTIE:  '#4CAF7D',
-  PRODUCTIE: '#C8963E',
-  VANZARE:   '#5A9FD4',
-  TRANSFER:  '#9B72CF',
-  DESEURI:   '#E05555',
+  RECEPTIE:     '#4CAF7D',
+  PRODUCTIE:    '#C8963E',
+  VANZARE:      '#5A9FD4',
+  TRANSFER:     '#9B72CF',
+  DESEURI:      '#E05555',
+  INVENTARIERE: '#68655F',
 }
 
 const fmtDate = (d: string) => {
@@ -55,17 +56,16 @@ export default function DashboardPage() {
   const navigate = useNavigate()
   const [chartDays, setChartDays] = useState(30)
 
-  const { data: products        = [] } = useQuery({ queryKey: ['products'],          queryFn: getProducts })
-  const { data: summary         = [] } = useQuery({ queryKey: ['stock-summary'],      queryFn: getWarehouseSummary })
-  const { data: recentMovements = [] } = useQuery({ queryKey: ['movements-recent'],   queryFn: () => getMovements({ limit: 8 }) })
+  const { data: products        = [] } = useQuery({ queryKey: ['products'],            queryFn: getProducts })
+  const { data: summary         = [] } = useQuery({ queryKey: ['stock-summary'],        queryFn: getWarehouseSummary })
+  const { data: recentMovements = [] } = useQuery({ queryKey: ['movements-recent'],     queryFn: () => getMovements({ limit: 8 }) })
   const { data: movsByDay       = [] } = useQuery({ queryKey: ['stats-mov-day', chartDays], queryFn: () => getMovementsByDay(chartDays) })
-  const { data: stockByType     = [] } = useQuery({ queryKey: ['stats-stock-type'],   queryFn: getStockByType })
-  const { data: topProducts     = [] } = useQuery({ queryKey: ['stats-top-prod'],     queryFn: getTopProducts })
-  const { data: movsByType      = [] } = useQuery({ queryKey: ['stats-mov-type'],     queryFn: getMovementsByType })
+  const { data: stockByType     = [] } = useQuery({ queryKey: ['stats-stock-type'],     queryFn: getStockByType })
+  const { data: topProducts     = [] } = useQuery({ queryKey: ['stats-top-prod'],       queryFn: getTopProducts })
+  const { data: movsByType      = [] } = useQuery({ queryKey: ['stats-mov-type'],       queryFn: getMovementsByType })
 
   const activeProducts = products.filter(p => (p.stock || []).some(s => s.quantity > 0)).length
   const lowStock       = products.filter(p => p.minStock > 0 && (p.stock || []).reduce((s, st) => s + st.quantity, 0) < p.minStock)
-  const totalMovements = recentMovements.length
 
   return (
     <div>
@@ -74,15 +74,13 @@ export default function DashboardPage() {
         <p className="text-sm text-text-3 mt-1">Bun venit în FurniStock</p>
       </div>
 
-      {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         <KpiCard label="Produse Catalog"  value={products.length}   sub={`${activeProducts} cu stoc activ`} accent="amber" />
         <KpiCard label="Hale & Depozite"  value={summary.length}    sub="locații active"                    accent="green" />
-        <KpiCard label="Mișcări Recente"  value={totalMovements}    sub="ultimele înregistrate"             accent="blue"  />
+        <KpiCard label="Mișcări Recente"  value={recentMovements.length} sub="ultimele înregistrate"        accent="blue"  />
         <KpiCard label="Alertă Stoc"      value={lowStock.length}   sub="produse sub minim"                 accent={lowStock.length > 0 ? 'red' : 'green'} />
       </div>
 
-      {/* Alert */}
       {lowStock.length > 0 && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-danger/5 border border-danger/15 rounded-xl px-4 py-3 mb-5 gap-3">
           <p className="text-sm text-text-2">
@@ -97,21 +95,14 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ── Rând 1: Grafic activitate + Pie mișcări ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-
-        {/* Activitate zilnică — ocupă 2/3 */}
         <div className="lg:col-span-2 bg-bg-surface border border-border rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <span className="text-[10px] font-semibold uppercase tracking-widest text-text-3">Activitate Zilnică</span>
             <div className="flex gap-1">
               {[7, 30, 90].map(d => (
                 <button key={d} onClick={() => setChartDays(d)}
-                  className={`text-xs px-2 py-1 rounded transition-all ${
-                    chartDays === d
-                      ? 'bg-accent/10 text-accent border border-accent/30'
-                      : 'text-text-3 hover:text-text'
-                  }`}>
+                  className={`text-xs px-2 py-1 rounded transition-all ${chartDays === d ? 'bg-accent/10 text-accent border border-accent/30' : 'text-text-3 hover:text-text'}`}>
                   {d}z
                 </button>
               ))}
@@ -137,30 +128,23 @@ export default function DashboardPage() {
                 {Object.entries(CHART_COLORS).map(([key, color]) => (
                   <Area key={key} type="monotone" dataKey={key}
                     name={key.charAt(0) + key.slice(1).toLowerCase()}
-                    stroke={color} strokeWidth={1.5}
-                    fill={`url(#grad-${key})`} />
+                    stroke={color} strokeWidth={1.5} fill={`url(#grad-${key})`} />
                 ))}
               </AreaChart>
             </ResponsiveContainer>
           )}
         </div>
 
-        {/* Pie mișcări luna curentă — ocupă 1/3 */}
         <div className="bg-bg-surface border border-border rounded-xl p-5">
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-text-3 mb-4">
-            Mișcări Luna Curentă
-          </div>
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-text-3 mb-4">Mișcări Luna Curentă</div>
           {movsByType.every((m: any) => m.value === 0) ? (
             <div className="h-48 flex items-center justify-center text-text-3 text-sm">Nicio mișcare luna aceasta</div>
           ) : (
             <>
               <ResponsiveContainer width="100%" height={160}>
                 <PieChart>
-                  <Pie data={movsByType} cx="50%" cy="50%" innerRadius={45} outerRadius={70}
-                    paddingAngle={3} dataKey="value">
-                    {movsByType.map((entry: any, i: number) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
+                  <Pie data={movsByType} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
+                    {movsByType.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
                   </Pie>
                   <Tooltip content={<PieTooltip />} />
                 </PieChart>
@@ -181,14 +165,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Rând 2: Bar chart top produse + Pie stoc ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-
-        {/* Top produse în stoc — 2/3 */}
         <div className="lg:col-span-2 bg-bg-surface border border-border rounded-xl p-5">
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-text-3 mb-4">
-            Top Produse în Stoc
-          </div>
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-text-3 mb-4">Top Produse în Stoc</div>
           {topProducts.length === 0 ? (
             <div className="h-48 flex items-center justify-center text-text-3 text-sm">Niciun stoc înregistrat</div>
           ) : (
@@ -204,22 +183,16 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Stoc pe tip produs — 1/3 */}
         <div className="bg-bg-surface border border-border rounded-xl p-5">
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-text-3 mb-4">
-            Stoc pe Categorie
-          </div>
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-text-3 mb-4">Stoc pe Categorie</div>
           {stockByType.every((s: any) => s.value === 0) ? (
             <div className="h-48 flex items-center justify-center text-text-3 text-sm">Niciun stoc înregistrat</div>
           ) : (
             <>
               <ResponsiveContainer width="100%" height={160}>
                 <PieChart>
-                  <Pie data={stockByType} cx="50%" cy="50%" innerRadius={45} outerRadius={70}
-                    paddingAngle={3} dataKey="value">
-                    {stockByType.map((entry: any, i: number) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
+                  <Pie data={stockByType} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
+                    {stockByType.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
                   </Pie>
                   <Tooltip content={<PieTooltip />} />
                 </PieChart>
@@ -240,7 +213,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Rând 3: Mișcări recente + Sumar hale ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-bg-surface border border-border rounded-xl p-5">
           <div className="flex justify-between items-center mb-4">

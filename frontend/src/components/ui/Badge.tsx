@@ -1,3 +1,14 @@
+import { ReactNode } from 'react'
+import {
+  PRODUCT_TYPE_ICONS,
+  PRODUCT_TYPE_LABELS,
+  PRODUCT_TYPE_COLORS,
+  MOVEMENT_TYPE_ICONS,
+  MOVEMENT_TYPE_LABELS,
+  MOVEMENT_TYPE_COLORS,
+  UNIT_LABELS,
+} from '../../lib/icons'
+
 type Color = 'amber' | 'green' | 'blue' | 'purple' | 'red' | 'gray'
 
 const colors: Record<Color, string> = {
@@ -9,7 +20,7 @@ const colors: Record<Color, string> = {
   gray:   'bg-bg-surface3 text-text-2',
 }
 
-export default function Badge({ color = 'gray', children }: { color?: Color; children: React.ReactNode }) {
+export default function Badge({ color = 'gray', children }: { color?: Color; children: ReactNode }) {
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${colors[color]}`}>
       {children}
@@ -18,29 +29,15 @@ export default function Badge({ color = 'gray', children }: { color?: Color; chi
 }
 
 export const productTypeBadge = (type: string) => {
-  const map: Record<string, [Color, string]> = {
-    MATERIE_PRIMA:   ['amber', '🪵 Materie Primă'],
-    GATA_ASAMBLARE:  ['blue',  '📦 Kit Asamblare'],
-    ASAMBLAT:        ['green', '🛋️ Asamblat'],
-  }
-  const [color, label] = map[type] || ['gray', type]
+  const color = (PRODUCT_TYPE_COLORS[type] || 'gray') as Color
+  const label = `${PRODUCT_TYPE_ICONS[type] || ''} ${PRODUCT_TYPE_LABELS[type] || type}`
   return <Badge color={color}>{label}</Badge>
 }
 
 export const movementTypeBadge = (type: string) => {
-  const map: Record<string, [Color, string]> = {
-    RECEPTIE:     ['green',  '📥 Recepție'],
-    PRODUCTIE:    ['amber',  '⚙️ Producție'],
-    VANZARE:      ['blue',   '📤 Vânzare'],
-    TRANSFER:     ['purple', '🔄 Transfer'],
-    DESEURI:      ['red',    '🗑️ Deșeuri'],
-    INVENTARIERE: ['gray',   '📋 Inventariere'],
-  }
-  const [color, label] = map[type] || ['gray', type]
+  const color = (MOVEMENT_TYPE_COLORS[type] || 'gray') as Color
+  const label = `${MOVEMENT_TYPE_ICONS[type] || ''} ${MOVEMENT_TYPE_LABELS[type] || type}`
   return <Badge color={color}>{label}</Badge>
 }
 
-export const unitLabel = (unit: string) => {
-  const map: Record<string, string> = { BUC: 'buc', MP: 'm²', ML: 'm.l.', KG: 'kg', M3: 'm³', L: 'l' }
-  return map[unit] || unit
-}
+export const unitLabel = (unit: string): string => UNIT_LABELS[unit] || unit
