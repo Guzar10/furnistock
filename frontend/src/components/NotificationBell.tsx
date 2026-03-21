@@ -19,8 +19,8 @@ const fmtTime = (iso: string) => {
   const d    = new Date(iso)
   const now  = new Date()
   const diff = Math.floor((now.getTime() - d.getTime()) / 1000)
-  if (diff < 60)   return 'Acum'
-  if (diff < 3600) return `${Math.floor(diff / 60)} min`
+  if (diff < 60)    return 'Acum'
+  if (diff < 3600)  return `${Math.floor(diff / 60)} min`
   if (diff < 86400) return `${Math.floor(diff / 3600)}h`
   return d.toLocaleDateString('ro-RO')
 }
@@ -31,7 +31,6 @@ export default function NotificationBell() {
   const ref             = useRef<HTMLDivElement>(null)
   const navigate        = useNavigate()
 
-  // Închide dropdown la click în afară
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -54,6 +53,31 @@ export default function NotificationBell() {
     setOpen(false)
   }
 
+  const getDropdownStyle = (): React.CSSProperties => {
+    const rect = ref.current?.getBoundingClientRect()
+    if (!rect) return { display: 'none' }
+
+    const dropHeight = 420
+    const dropWidth  = 320
+    const spaceBelow = window.innerHeight - rect.bottom
+    const spaceAbove = rect.top
+    const openUpward = spaceBelow < dropHeight && spaceAbove > spaceBelow
+
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - dropWidth - 8))
+
+    return {
+      position: 'fixed',
+      left,
+      width:   `${dropWidth}px`,
+      zIndex:  9999,
+      maxHeight: `${Math.min(dropHeight, openUpward ? spaceAbove - 8 : spaceBelow - 8)}px`,
+      ...(openUpward
+        ? { bottom: window.innerHeight - rect.top + 8 }
+        : { top:    rect.bottom + 8 }
+      ),
+    }
+  }
+
   return (
     <div className="relative" ref={ref}>
       {/* Bell button */}
@@ -72,24 +96,25 @@ export default function NotificationBell() {
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-bg-surface border border-border-2 rounded-xl shadow-2xl z-50 overflow-hidden">
+        <div
+          style={getDropdownStyle()}
+          className="bg-bg-surface border border-border-2 rounded-xl shadow-2xl overflow-hidden flex flex-col"
+        >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
             <span className="text-sm font-medium text-text">Notificări</span>
-            <div className="flex gap-2">
-              {notifications.length > 0 && (
-                <button
-                  onClick={clearAll}
-                  className="text-[11px] text-text-3 hover:text-danger transition-colors"
-                >
-                  Șterge toate
-                </button>
-              )}
-            </div>
+            {notifications.length > 0 && (
+              <button
+                onClick={clearAll}
+                className="text-[11px] text-text-3 hover:text-danger transition-colors"
+              >
+                Șterge toate
+              </button>
+            )}
           </div>
 
           {/* Lista */}
-          <div className="max-h-96 overflow-y-auto">
+          <div className="overflow-y-auto flex-1">
             {notifications.length === 0 ? (
               <div className="text-center py-10">
                 <div className="text-3xl mb-2 opacity-20">🔔</div>
@@ -100,7 +125,7 @@ export default function NotificationBell() {
                 <div
                   key={n.id}
                   onClick={() => handleClick(n)}
-                  className={`flex gap-3 px-4 py-3 border-b border-border cursor-pointer transition-colors hover:bg-bg-surface2 ${!n.read ? 'bg-accent/3' : ''}`}
+                  className={`flex gap-3 px-4 py-3 border-b border-border cursor-pointer transition-colors hover:bg-bg-surface2 ${!n.read ? 'bg-accent/5' : ''}`}
                 >
                   <span className="text-xl shrink-0 mt-0.5">{typeIcon[n.type]}</span>
                   <div className="flex-1 min-w-0">
@@ -120,7 +145,7 @@ export default function NotificationBell() {
 
           {/* Footer */}
           {notifications.length > 0 && (
-            <div className="px-4 py-2.5 border-t border-border text-center">
+            <div className="px-4 py-2.5 border-t border-border text-center flex-shrink-0">
               <button
                 onClick={() => { navigate('/movements'); setOpen(false) }}
                 className="text-xs text-accent hover:text-accent/80 transition-colors"
