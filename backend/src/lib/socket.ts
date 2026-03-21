@@ -87,11 +87,16 @@ export const sendNotification = (
     createdAt: new Date().toISOString(),
   }
 
+  console.log(`[SOCKET] Trimite notificare → target: ${target}, type: ${payload.type}`)
+  console.log(`[SOCKET] Rooms active:`, Array.from(io.sockets.adapter.rooms.keys()))
+
   if (target === 'all') {
-    emitToAll('notification', payload)
+    const count = io.sockets.sockets.size
+    console.log(`[SOCKET] Trimite la ${count} client(i) conectați`)
+    io.emit('notification', payload)
   } else if (target === 'admins_managers') {
-    emitToAdminsAndManagers('notification', payload)
+    io.to('role:ADMIN').to('role:MANAGER').emit('notification', payload)
   } else {
-    emitToUser(target, 'notification', payload)
+    io.to(`user:${target}`).emit('notification', payload)
   }
 }

@@ -1,24 +1,38 @@
 import { io, Socket } from 'socket.io-client'
 
 let socket: Socket | null = null
+let currentToken: string | null = null
 
 export const connectSocket = (token: string): Socket => {
-  if (socket?.connected) return socket
+  if (socket?.connected && currentToken === token) return socket
+
+  if (socket) {
+    socket.removeAllListeners()
+    socket.disconnect()
+  }
+
+  currentToken = token
+  console.log('[SOCKET] Încearcă conectarea cu token:', token ? 'prezent' : 'lipsă')
 
   socket = io('http://localhost:3001', {
-    auth:            { token },
-    transports:      ['websocket', 'polling'],
-    reconnection:    true,
-    reconnectionDelay: 1000,
-    reconnectionAttempts: 10,
+    auth:                  { token },
+    transports:            ['websocket', 'polling'],
+    reconnection:          true,
+    reconnectionDelay:     2000,
+    reconnectionAttempts:  20,
+    autoConnect:           true,
+    forceNew:              false,
   })
 
   socket.on('connect', () => {
-    console.log('[SOCKET] Conectat la server')
+    console.log('[SOCKET] Conectat la server — id:', socket?.id)
   })
 
   socket.on('disconnect', (reason) => {
     console.log('[SOCKET] Deconectat:', reason)
+    if (reason === 'io server disconnect') {
+      socket?.connect()
+    }
   })
 
   socket.on('connect_error', (err) => {
@@ -30,8 +44,10 @@ export const connectSocket = (token: string): Socket => {
 
 export const disconnectSocket = () => {
   if (socket) {
+    socket.removeAllListeners()
     socket.disconnect()
     socket = null
+    currentToken = null
   }
 }
 

@@ -105,6 +105,8 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   const userId = req.user!.userId
 
   try {
+    console.log('[MOVEMENT] Tip:', data.type, '| User:', userId)
+
     const movement = await prisma.$transaction(async (tx) => {
       let lines: any[] = []
 
@@ -242,6 +244,8 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       }
     })
 
+    console.log('[MOVEMENT] Tranzacție completă, trimit notificări...')
+
     // ── Notificări ──
     const userRecord = await prisma.user.findUnique({
       where:  { id: userId },
@@ -252,10 +256,10 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     if (data.type === 'TRANSFER') {
       const transferLines = (data as any).lines || []
       for (const line of transferLines) {
-        const product = await prisma.product.findUnique({ where: { id: line.productId },       select: { name: true } })
+        const product = await prisma.product.findUnique({ where: { id: line.productId },        select: { name: true } })
         const fromWh  = await prisma.warehouse.findUnique({ where: { id: line.fromWarehouseId }, select: { name: true } })
         const toWh    = await prisma.warehouse.findUnique({ where: { id: line.toWarehouseId },   select: { name: true } })
-        sendNotification('admins_managers', {
+        sendNotification('all', {
           type:    'transfer',
           title:   '🔄 Transfer de stoc',
           message: `${userName} a transferat ${line.quantity} ${product?.name || ''} din ${fromWh?.name || '?'} spre ${toWh?.name || '?'}`,
@@ -263,7 +267,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         })
       }
     } else {
-      sendNotification('admins_managers', {
+      sendNotification('all', {
         type:    'movement',
         title:   `📦 Mișcare nouă — ${data.type}`,
         message: `${userName} a înregistrat o mișcare de tip ${data.type.toLowerCase()}`,
