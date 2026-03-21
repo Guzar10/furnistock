@@ -88,11 +88,9 @@ export const sendNotification = (
   }
 
   console.log(`[SOCKET] Trimite notificare → target: ${target}, type: ${payload.type}`)
-  console.log(`[SOCKET] Rooms active:`, Array.from(io.sockets.adapter.rooms.keys()))
 
   if (target === 'all') {
     const count = io.sockets.sockets.size
-    console.log(`[SOCKET] Trimite la ${count} client(i) conectați`)
     io.emit('notification', payload)
   } else if (target === 'admins_managers') {
     io.to('role:ADMIN').to('role:MANAGER').emit('notification', payload)

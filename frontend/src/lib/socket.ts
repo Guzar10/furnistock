@@ -12,7 +12,6 @@ export const connectSocket = (token: string): Socket => {
   }
 
   currentToken = token
-  console.log('[SOCKET] Încearcă conectarea cu token:', token ? 'prezent' : 'lipsă')
 
   socket = io('http://localhost:3001', {
     auth:                  { token },

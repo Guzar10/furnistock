@@ -105,8 +105,6 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   const userId = req.user!.userId
 
   try {
-    console.log('[MOVEMENT] Tip:', data.type, '| User:', userId)
-
     const movement = await prisma.$transaction(async (tx) => {
       let lines: any[] = []
 
@@ -243,8 +241,6 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         })
       }
     })
-
-    console.log('[MOVEMENT] Tranzacție completă, trimit notificări...')
 
     // ── Notificări ──
     const userRecord = await prisma.user.findUnique({

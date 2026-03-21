@@ -19,7 +19,6 @@ export const useSocket = () => {
     const socket = connectSocket(accessToken)
 
     const handleNotification = (payload: Omit<Notification, 'read'>) => {
-      console.log('[SOCKET] Notificare primită:', payload)
       addNotification(payload)
 
       if (payload.type === 'movement' || payload.type === 'transfer') {
