@@ -14,7 +14,7 @@ export const usePageTitle = () => {
   const { pathname } = useLocation()
 
   useEffect(() => {
-    const base    = 'FurniStock'
+    const base    = 'MunteximStock'
     const matched = Object.entries(TITLES).find(([path]) => pathname.startsWith(path))
     document.title = matched ? `${matched[1]} — ${base}` : base
   }, [pathname])

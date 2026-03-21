@@ -30,8 +30,11 @@ export default function LoginPage() {
     <div className="min-h-screen bg-bg flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8 md:mb-10">
+          <div className="flex items-center justify-center mb-4">
+            <img src="/muntexim.svg" alt="Muntexim" className="w-8 h-8 object-contain" />
+          </div>
           <h1 className="font-serif text-4xl md:text-5xl font-light text-text mb-2">
-            Furni<span className="text-accent">Stock</span>
+            Muntexim<span className="text-accent">Stock</span>
           </h1>
           <p className="text-sm text-text-3">Gestiune Stocuri Mobilier</p>
         </div>
@@ -42,15 +45,17 @@ export default function LoginPage() {
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-text-2">Email</label>
               <input
-                type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="admin@furnistock.ro" required
+                type="email" value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="admin@muntexim.ro" required
                 className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2.5 text-sm text-text placeholder:text-text-3 outline-none focus:border-accent transition-colors"
               />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-text-2">Parolă</label>
               <input
-                type="password" value={password} onChange={e => setPassword(e.target.value)}
+                type="password" value={password}
+                onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••" required
                 className="bg-bg-surface2 border border-border-2 rounded-md px-3 py-2.5 text-sm text-text placeholder:text-text-3 outline-none focus:border-accent transition-colors"
               />
@@ -68,9 +73,6 @@ export default function LoginPage() {
             </button>
           </form>
         </div>
-        <p className="text-center text-xs text-text-3 mt-5">
-          admin@furnistock.ro · admin123
-        </p>
       </div>
     </div>
   )
